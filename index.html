@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#171c2c">
+  <title>Tic Tac Toe — Your move</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100svh; background: #101420; color: #f4f3ed; font-family: system-ui, sans-serif; display: grid; place-items: center; padding: 24px 16px; }
+    main { width: min(100%, 420px); }
+    .eyebrow { color: #b3bdcf; text-transform: uppercase; letter-spacing: .22em; font-size: 11px; font-weight: 700; }
+    header { margin-bottom: 28px; }
+    h1 { font-size: clamp(34px, 9vw, 46px); letter-spacing: -.055em; margin: 8px 0; }
+    .intro { color: #a7afc1; margin: 0; font-size: 14px; }
+    .players { display: flex; gap: 12px; margin-bottom: 20px; }
+    .player { flex: 1; padding: 15px; border: 1px solid #343b4e; border-radius: 12px; background: #191f30; display: flex; align-items: center; gap: 12px; }
+    .player.active { border-color: #d5ef90; background: #232c30; }
+    .symbol { font-size: 28px; font-weight: 700; color: #d5ef90; }
+    .player:last-child .symbol { color: #c0b3f5; }
+    .player small { display: block; color: #a7afc1; font-size: 11px; margin-top: 3px; }
+    .player strong { font-size: 13px; }
+    .board { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .cell { aspect-ratio: 1; min-width: 0; border: 1px solid #30384c; border-radius: 14px; background: #1c2335; color: #d5ef90; font: 600 clamp(42px, 14vw, 66px)/1 system-ui, sans-serif; cursor: pointer; touch-action: manipulation; transition: background .15s, transform .15s; }
+    .cell:not(:disabled):hover { background: #2a3349; transform: translateY(-2px); }
+    .cell:disabled { cursor: default; opacity: 1; }
+    .cell.o { color: #c0b3f5; }
+    .cell.win { background: #344333; border-color: #d5ef90; }
+    button:focus-visible { outline: 3px solid #f5d87b; outline-offset: 4px; }
+    .status { text-align: center; font-size: 16px; font-weight: 600; margin: 24px 0 18px; min-height: 24px; }
+    .restart { width: 100%; padding: 15px; background: #d5ef90; color: #172016; border: 0; border-radius: 10px; font: 700 14px system-ui, sans-serif; cursor: pointer; touch-action: manipulation; }
+    .restart:hover { background: #e3ffa0; }
+    footer { text-align: center; color: #949eb3; font-size: 12px; margin-top: 24px; }
+    @media (prefers-reduced-motion: reduce) { .cell { transition: none; } }
+  </style>
+</head>
+<body>
+  <main>
+    <header><span class="eyebrow">A little friendly competition</span><h1>Tic Tac Toe<span style="color:#d5ef90">.</span></h1><p class="intro">Two players. Three in a row. Your move.</p></header>
+    <div class="players" aria-label="Players">
+      <div class="player active" id="player-x"><span class="symbol" aria-hidden="true">X</span><div><strong>Player X</strong><small>Goes first</small></div></div>
+      <div class="player" id="player-o"><span class="symbol" aria-hidden="true">O</span><div><strong>Player O</strong><small>Make your mark</small></div></div>
+    </div>
+    <div class="board" role="group" aria-label="Tic Tac Toe board"></div>
+    <p class="status" role="status" aria-live="polite" aria-atomic="true">Player X’s turn</p>
+    <button class="restart" type="button">↻ &nbsp; Restart game</button>
+    <footer>Pass the device. Take a turn. Have fun.</footer>
+  </main>
+  <script>
+    const board = document.querySelector('.board');
+    const status = document.querySelector('.status');
+    const players = [document.querySelector('#player-x'), document.querySelector('#player-o')];
+    const winningLines = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+    let squares = Array(9).fill('');
+    let turn = 'X';
+    let finished = false;
+    const cells = squares.map((_, index) => {
+      const cell = document.createElement('button');
+      cell.type = 'button';
+      cell.className = 'cell';
+      cell.setAttribute('aria-label', `Row ${Math.floor(index / 3) + 1}, column ${index % 3 + 1}, empty`);
+      cell.addEventListener('click', () => play(index));
+      board.append(cell);
+      return cell;
+    });
+    function updatePlayers() {
+      players[0].classList.toggle('active', !finished && turn === 'X');
+      players[1].classList.toggle('active', !finished && turn === 'O');
+    }
+    function play(index) {
+      if (finished || squares[index]) return;
+      squares[index] = turn;
+      cells[index].textContent = turn;
+      cells[index].classList.toggle('o', turn === 'O');
+      cells[index].setAttribute('aria-label', `Row ${Math.floor(index / 3) + 1}, column ${index % 3 + 1}, ${turn}`);
+      cells[index].disabled = true;
+      const winner = winningLines.find(line => line.every(i => squares[i] === turn));
+      if (winner) {
+        finished = true;
+        winner.forEach(i => cells[i].classList.add('win'));
+        status.textContent = `Player ${turn} wins! Nicely played.`;
+      } else if (squares.every(Boolean)) {
+        finished = true;
+        status.textContent = 'It’s a draw! Try another round.';
+      } else {
+        turn = turn === 'X' ? 'O' : 'X';
+        status.textContent = `Player ${turn}’s turn`;
+      }
+      if (finished) cells.forEach(cell => { cell.disabled = true; });
+      updatePlayers();
+    }
+    document.querySelector('.restart').addEventListener('click', () => {
+      squares = Array(9).fill('');
+      turn = 'X';
+      finished = false;
+      cells.forEach((cell, index) => {
+        cell.textContent = '';
+        cell.className = 'cell';
+        cell.disabled = false;
+        cell.setAttribute('aria-label', `Row ${Math.floor(index / 3) + 1}, column ${index % 3 + 1}, empty`);
+      });
+      status.textContent = 'Player X’s turn';
+      updatePlayers();
+    });
+  </script>
+</body>
+</html>
