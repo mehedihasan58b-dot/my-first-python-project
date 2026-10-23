@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#171c2c">
   <title>Tic Tac Toe — Your move</title>
   <style>
@@ -32,76 +32,207 @@
     .restart:hover { background: #e3ffa0; }
     footer { text-align: center; color: #949eb3; font-size: 12px; margin-top: 24px; }
     @media (prefers-reduced-motion: reduce) { .cell { transition: none; } }
+
+    main { text-align: center; }
+    header { text-align: left; }
+    .game { width: 100%; }
+    .settings { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; text-align: left; }
+    label { display: grid; gap: 8px; font-size: 12px; font-weight: 700; }
+    select { width: 100%; min-width: 0; padding: 12px 8px; border: 1px solid #343b4e; border-radius: 10px; background: #191f30; color: #f4f3ed; font: inherit; font-size: 13px; }
+    select:focus-visible { outline: 3px solid #f5d87b; outline-offset: 3px; }
+    select:disabled { opacity: .6; }
+    .player { justify-content: center; font-size: 13px; padding: 12px 8px; }
+    .cell.x { color: #d5ef90; }
+    .cell.winner { background: #344333; border-color: #d5ef90; }
+    #status { text-align: center; font-size: 16px; font-weight: 600; margin: 20px 0 18px; min-height: 24px; }
+    #restart { width: 100%; margin-top: 20px; padding: 15px; background: #d5ef90; color: #172016; border: 0; border-radius: 10px; font: 700 14px system-ui, sans-serif; cursor: pointer; touch-action: manipulation; }
+    #restart:hover { background: #e3ffa0; }
+    .scoreboard { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 20px 0 10px; }
+    .scoreboard div { padding: 12px 4px; border: 1px solid #343b4e; border-radius: 12px; background: #191f30; color: #b3bdcf; font-size: 12px; }
+    .scoreboard strong { display: block; margin-top: 5px; color: #f4f3ed; font-size: 24px; }
+    #reset-scores { border: 0; padding: 12px; background: transparent; color: #c0b3f5; cursor: pointer; text-decoration: underline; }
+    .score-note { margin: 0; font-size: 11px; color: #a7afc1; }
+    .instructions { margin-top: 24px; color: #a7afc1; font-size: 13px; line-height: 1.8; }
+    .instructions strong { color: #f4f3ed; }
   </style>
 </head>
 <body>
   <main>
-    <header><span class="eyebrow">A little friendly competition</span><h1>Tic Tac Toe<span style="color:#d5ef90">.</span></h1><p class="intro">Two players. Three in a row. Your move.</p></header>
-    <div class="players" aria-label="Players">
-      <div class="player active" id="player-x"><span class="symbol" aria-hidden="true">X</span><div><strong>Player X</strong><small>Goes first</small></div></div>
-      <div class="player" id="player-o"><span class="symbol" aria-hidden="true">O</span><div><strong>Player O</strong><small>Make your mark</small></div></div>
-    </div>
-    <div class="board" role="group" aria-label="Tic Tac Toe board"></div>
-    <p class="status" role="status" aria-live="polite" aria-atomic="true">Player X’s turn</p>
-    <button class="restart" type="button">↻ &nbsp; Restart game</button>
-    <footer>Pass the device. Take a turn. Have fun.</footer>
+    <header><span class="eyebrow">A little friendly competition</span><h1>Tic Tac Toe<span style="color:#d5ef90">.</span></h1><p class="intro">Play with a friend or challenge the computer.</p></header>
+    <section class="game" aria-label="Tic Tac Toe game">
+      <div class="settings">
+        <label>Game mode<select id="mode"><option value="pvp">Player vs Player</option><option value="computer">Player vs Computer</option></select></label>
+        <label>Computer difficulty<select id="difficulty" disabled><option value="easy">Easy</option><option value="medium">Medium</option><option value="hard">Hard</option></select></label>
+      </div>
+      <div class="players">
+        <div id="player-x" class="player active"><span class="symbol x">X</span> Player one</div>
+        <div id="player-o" class="player"><span class="symbol o">O</span> <span id="o-name">Player two</span></div>
+      </div>
+      <p id="status" role="status" aria-live="polite" aria-atomic="true">X's turn — you're up!</p>
+      <div class="board" role="group" aria-label="Game board, three rows and three columns">
+        <button class="cell" aria-label="Row 1, column 1, empty"></button>
+        <button class="cell" aria-label="Row 1, column 2, empty"></button>
+        <button class="cell" aria-label="Row 1, column 3, empty"></button>
+        <button class="cell" aria-label="Row 2, column 1, empty"></button>
+        <button class="cell" aria-label="Row 2, column 2, empty"></button>
+        <button class="cell" aria-label="Row 2, column 3, empty"></button>
+        <button class="cell" aria-label="Row 3, column 1, empty"></button>
+        <button class="cell" aria-label="Row 3, column 2, empty"></button>
+        <button class="cell" aria-label="Row 3, column 3, empty"></button>
+      </div>
+      <button id="restart">↻ &nbsp; Restart game</button>
+      <div class="scoreboard" role="group" aria-label="Scoreboard">
+        <div>X wins<strong id="score-x">0</strong></div>
+        <div>Draws<strong id="score-draw">0</strong></div>
+        <div>O wins<strong id="score-o">0</strong></div>
+      </div>
+      <p class="score-note">Scores for this mode and difficulty · this page session</p>
+      <button id="reset-scores">Reset scores</button>
+    </section>
+    <p class="instructions"><strong>Three in a row takes the win.</strong><br>X always starts. In computer mode, you play X. Changing settings starts a new round. Connect three marks across, down, or diagonally.</p>
+    <footer>No sign-ups. Just good company.</footer>
   </main>
   <script>
-    const board = document.querySelector('.board');
-    const status = document.querySelector('.status');
-    const players = [document.querySelector('#player-x'), document.querySelector('#player-o')];
-    const winningLines = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
-    let squares = Array(9).fill('');
-    let turn = 'X';
-    let finished = false;
-    const cells = squares.map((_, index) => {
-      const cell = document.createElement('button');
-      cell.type = 'button';
-      cell.className = 'cell';
-      cell.setAttribute('aria-label', `Row ${Math.floor(index / 3) + 1}, column ${index % 3 + 1}, empty`);
-      cell.addEventListener('click', () => play(index));
-      board.append(cell);
-      return cell;
-    });
-    function updatePlayers() {
-      players[0].classList.toggle('active', !finished && turn === 'X');
-      players[1].classList.toggle('active', !finished && turn === 'O');
+    // Game state: the nine squares run from top-left to bottom-right.
+    const cells = Array.from(document.querySelectorAll('.cell'));
+    const status = document.querySelector('#status');
+    const mode = document.querySelector('#mode');
+    const difficulty = document.querySelector('#difficulty');
+    const winningLines = [
+      [0, 1, 2], [3, 4, 5], [6, 7, 8],
+      [0, 3, 6], [1, 4, 7], [2, 5, 8],
+      [0, 4, 8], [2, 4, 6]
+    ];
+    let board = Array(9).fill('');
+    let currentPlayer = 'X';
+    let gameOver = false;
+    let computerTimer = null;
+    // Keep separate scores so different opponents/difficulties are not mixed.
+    const scores = {};
+    function scoreKey() {
+      return mode.value === 'pvp' ? 'pvp' : difficulty.value;
     }
-    function play(index) {
-      if (finished || squares[index]) return;
-      squares[index] = turn;
-      cells[index].textContent = turn;
-      cells[index].classList.toggle('o', turn === 'O');
-      cells[index].setAttribute('aria-label', `Row ${Math.floor(index / 3) + 1}, column ${index % 3 + 1}, ${turn}`);
-      cells[index].disabled = true;
-      const winner = winningLines.find(line => line.every(i => squares[i] === turn));
-      if (winner) {
-        finished = true;
-        winner.forEach(i => cells[i].classList.add('win'));
-        status.textContent = `Player ${turn} wins! Nicely played.`;
-      } else if (squares.every(Boolean)) {
-        finished = true;
-        status.textContent = 'It’s a draw! Try another round.';
-      } else {
-        turn = turn === 'X' ? 'O' : 'X';
-        status.textContent = `Player ${turn}’s turn`;
-      }
-      if (finished) cells.forEach(cell => { cell.disabled = true; });
-      updatePlayers();
+    function currentScores() {
+      return scores[scoreKey()] ||= { X: 0, O: 0, draw: 0 };
     }
-    document.querySelector('.restart').addEventListener('click', () => {
-      squares = Array(9).fill('');
-      turn = 'X';
-      finished = false;
+    function updateScores() {
+      const score = currentScores();
+      document.querySelector('#score-x').textContent = score.X;
+      document.querySelector('#score-o').textContent = score.O;
+      document.querySelector('#score-draw').textContent = score.draw;
+    }
+    function winnerLine(state) {
+      return winningLines.find(line => state[line[0]] &&
+        line.every(index => state[index] === state[line[0]]));
+    }
+    function emptySquares(state) {
+      return state.map((value, index) => value === '' ? index : -1).filter(index => index !== -1);
+    }
+    function labelFor(index, value) {
+      return `Row ${Math.floor(index / 3) + 1}, column ${index % 3 + 1}, ${value || 'empty'}`;
+    }
+    function render() {
+      const computerTurn = mode.value === 'computer' && currentPlayer === 'O';
+      const line = winnerLine(board);
       cells.forEach((cell, index) => {
-        cell.textContent = '';
-        cell.className = 'cell';
-        cell.disabled = false;
-        cell.setAttribute('aria-label', `Row ${Math.floor(index / 3) + 1}, column ${index % 3 + 1}, empty`);
+        cell.textContent = board[index];
+        cell.className = 'cell' + (board[index] ? ' ' + board[index].toLowerCase() : '');
+        if (line?.includes(index)) cell.classList.add('winner');
+        cell.disabled = gameOver || !!board[index] || computerTurn;
+        cell.setAttribute('aria-label', labelFor(index, board[index]));
       });
-      status.textContent = 'Player X’s turn';
-      updatePlayers();
+      document.querySelector('#player-x').classList.toggle('active', !gameOver && currentPlayer === 'X');
+      document.querySelector('#player-o').classList.toggle('active', !gameOver && currentPlayer === 'O');
+      if (!gameOver) status.textContent = computerTurn ? 'Computer is thinking…' : `${currentPlayer}'s turn — you're up!`;
+      updateScores();
+    }
+    // Try placing a mark in each empty square to find an immediate win.
+    function immediateMove(state, mark) {
+      return emptySquares(state).find(index => {
+        const next = state.slice();
+        next[index] = mark;
+        return !!winnerLine(next);
+      });
+    }
+    // Minimax explores every possible continuation. O maximizes; X minimizes.
+    function minimax(state, turn, depth = 0) {
+      const line = winnerLine(state);
+      if (line) return state[line[0]] === 'O' ? 10 - depth : depth - 10;
+      const available = emptySquares(state);
+      if (!available.length) return 0;
+      const values = available.map(index => {
+        const next = state.slice();
+        next[index] = turn;
+        return minimax(next, turn === 'O' ? 'X' : 'O', depth + 1);
+      });
+      return turn === 'O' ? Math.max(...values) : Math.min(...values);
+    }
+    function chooseComputerMove(state, level) {
+      const available = emptySquares(state);
+      if (!available.length || winnerLine(state)) return undefined;
+      if (level === 'hard') {
+        let bestScore = -Infinity;
+        let bestMove = available[0];
+        available.forEach(index => {
+          const next = state.slice();
+          next[index] = 'O';
+          const score = minimax(next, 'X');
+          if (score > bestScore) { bestScore = score; bestMove = index; }
+        });
+        return bestMove;
+      }
+      if (level === 'medium') {
+        const win = immediateMove(state, 'O');
+        if (win !== undefined) return win;
+        const block = immediateMove(state, 'X');
+        if (block !== undefined) return block;
+      }
+      return available[Math.floor(Math.random() * available.length)];
+    }
+    function makeMove(index, fromComputer = false) {
+      const computerTurn = mode.value === 'computer' && currentPlayer === 'O';
+      if (gameOver || board[index] !== '' || computerTurn !== fromComputer) return;
+      board[index] = currentPlayer;
+      const line = winnerLine(board);
+      if (line) {
+        gameOver = true;
+        currentScores()[currentPlayer]++;
+        status.textContent = `${currentPlayer} wins! Nicely played 🎉`;
+      } else if (!emptySquares(board).length) {
+        gameOver = true;
+        currentScores().draw++;
+        status.textContent = "It's a draw! Another round? 🤝";
+      } else {
+        currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+      }
+      render();
+      if (!gameOver && mode.value === 'computer' && currentPlayer === 'O') {
+        computerTimer = setTimeout(() => {
+          computerTimer = null;
+          makeMove(chooseComputerMove(board, difficulty.value), true);
+        }, 350);
+      }
+    }
+    function restartGame() {
+      // Cancel pending computer moves when restarting or changing settings.
+      clearTimeout(computerTimer);
+      computerTimer = null;
+      board = Array(9).fill('');
+      currentPlayer = 'X';
+      gameOver = false;
+      difficulty.disabled = mode.value === 'pvp';
+      document.querySelector('#o-name').textContent = mode.value === 'computer' ? 'Computer' : 'Player two';
+      render();
+    }
+    cells.forEach((cell, index) => cell.addEventListener('click', () => makeMove(index)));
+    document.querySelector('#restart').addEventListener('click', restartGame);
+    mode.addEventListener('change', restartGame);
+    difficulty.addEventListener('change', restartGame);
+    document.querySelector('#reset-scores').addEventListener('click', () => {
+      scores[scoreKey()] = { X: 0, O: 0, draw: 0 };
+      updateScores();
     });
+    restartGame();
   </script>
 </body>
 </html>
