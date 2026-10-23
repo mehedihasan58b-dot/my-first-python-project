@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#171c2c">
-  <title>Little Board Games — Tic Tac Toe &amp; Tin Guti</title>
+  <title>Tin Guti — Three Men's Morris</title>
   <style>
     * { box-sizing: border-box; }
     body { margin: 0; min-height: 100svh; background: #101420; color: #f4f3ed; font-family: system-ui, sans-serif; display: grid; place-items: center; padding: 24px 16px; }
@@ -18,18 +18,12 @@
     .player.active { border-color: #d5ef90; background: #232c30; }
     .symbol { font-size: 28px; font-weight: 700; color: #d5ef90; }
     .player:last-child .symbol { color: #c0b3f5; }
-    .player small { display: block; color: #a7afc1; font-size: 11px; margin-top: 3px; }
-    .player strong { font-size: 13px; }
     .board { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
     .cell { aspect-ratio: 1; min-width: 0; border: 1px solid #30384c; border-radius: 14px; background: #1c2335; color: #d5ef90; font: 600 clamp(42px, 14vw, 66px)/1 system-ui, sans-serif; cursor: pointer; touch-action: manipulation; transition: background .15s, transform .15s; }
     .cell:not(:disabled):hover { background: #2a3349; transform: translateY(-2px); }
     .cell:disabled { cursor: default; opacity: 1; }
     .cell.o { color: #c0b3f5; }
-    .cell.win { background: #344333; border-color: #d5ef90; }
     button:focus-visible { outline: 3px solid #f5d87b; outline-offset: 4px; }
-    .status { text-align: center; font-size: 16px; font-weight: 600; margin: 24px 0 18px; min-height: 24px; }
-    .restart { width: 100%; padding: 15px; background: #d5ef90; color: #172016; border: 0; border-radius: 10px; font: 700 14px system-ui, sans-serif; cursor: pointer; touch-action: manipulation; }
-    .restart:hover { background: #e3ffa0; }
     footer { text-align: center; color: #949eb3; font-size: 12px; margin-top: 24px; }
     @media (prefers-reduced-motion: reduce) { .cell { transition: none; } }
 
@@ -54,37 +48,22 @@
     .score-note { margin: 0; font-size: 11px; color: #a7afc1; }
     .instructions { margin-top: 24px; color: #a7afc1; font-size: 13px; line-height: 1.8; }
     .instructions strong { color: #f4f3ed; }
-    [hidden] { display: none !important; }
-    .home-card { display: block; width: 100%; padding: 24px; margin: 14px 0; text-align: left; color: #f4f3ed; background: #191f30; border: 1px solid #343b4e; border-radius: 16px; cursor: pointer; font: inherit; touch-action: manipulation; }
-    .home-card:hover { border-color: #d5ef90; }
-    .home-card strong { display: block; font-size: 22px; margin-bottom: 8px; color: #d5ef90; }
-    .home-card span { color: #b3bdcf; font-size: 14px; }
-    #back-home { min-height: 44px; border: 1px solid #343b4e; border-radius: 10px; background: #191f30; color: #c0b3f5; padding: 10px 16px; margin-bottom: 18px; cursor: pointer; font: inherit; }
     .board-wrap { position: relative; }
-    #connections { display: none; position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
-    .morris #connections { display: block; }
-    .morris .board { gap: 0; padding: 0; }
-    .morris .cell { position: relative; z-index: 1; border: 0; border-radius: 50%; background: transparent; font-size: clamp(30px, 11vw, 48px); }
-    .morris .cell::before { content: ''; position: absolute; inset: 20%; background: #1c2335; border: 2px solid #53617a; border-radius: 50%; z-index: -1; }
-    .morris .cell:not(:disabled):hover { background: transparent; transform: none; }
-    .morris .cell.selected::before { border: 4px solid #f5d87b; background: #343c36; }
-    .morris .cell.target::before { border-color: #d5ef90; background: #293c35; }
-    .morris .cell.winner::before { background: #344333; border-color: #d5ef90; }
+    #connections { display: block; position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+    .board { gap: 0; padding: 0; }
+    .cell { position: relative; z-index: 1; border: 0; border-radius: 50%; background: transparent; font-size: clamp(30px, 11vw, 48px); }
+    .cell::before { content: ''; position: absolute; inset: 20%; background: #1c2335; border: 2px solid #53617a; border-radius: 50%; z-index: -1; }
+    .cell:not(:disabled):hover { background: transparent; transform: none; }
+    .cell.selected::before { border: 4px solid #f5d87b; background: #343c36; }
+    .cell.target::before { border-color: #d5ef90; background: #293c35; }
+    .cell.winner::before { background: #344333; border-color: #d5ef90; }
     #phase { color: #b3bdcf; font-size: 13px; min-height: 20px; }
   </style>
 </head>
 <body>
   <main>
-    <section id="home" aria-label="Choose a game">
-      <header><span class="eyebrow">A little friendly competition</span><h1>Little board games.</h1><p class="intro">Pick a game. Make your move.</p></header>
-      <button class="home-card" id="open-ttt"><strong>Tic Tac Toe ↗</strong><span>The classic. Place your marks, connect three.</span></button>
-      <button class="home-card" id="open-morris"><strong>Tin Guti ↗</strong><span>Three Men's Morris. Place three pieces, then slide to win.</span></button>
-      <p class="instructions">Play with a friend on this device or challenge three computer difficulty levels.</p>
-    </section>
-    <section id="game-screen" hidden>
-    <button id="back-home">← Back to Home</button>
-    <header><span class="eyebrow">A little friendly competition</span><h1 id="game-title" tabindex="-1">Tic Tac Toe</h1><p class="intro">Play with a friend or challenge the computer.</p></header>
-    <section class="game" aria-label="Board game">
+    <header><span class="eyebrow">A little friendly competition</span><h1>Tin Guti<span style="color:#d5ef90">.</span></h1><p class="intro">Three Men's Morris · Place three. Slide to win.</p></header>
+    <section class="game" aria-label="Tin Guti game">
       <div class="settings">
         <label>Game mode<select id="mode"><option value="pvp">Player vs Player</option><option value="computer">Player vs Computer</option></select></label>
         <label>Computer difficulty<select id="difficulty" disabled><option value="easy">Easy</option><option value="medium">Medium</option><option value="hard">Hard</option></select></label>
@@ -115,15 +94,14 @@
         <div>Draws<strong id="score-draw">0</strong></div>
         <div>O wins<strong id="score-o">0</strong></div>
       </div>
-      <p class="score-note">Scores for this game, mode and difficulty · this page session</p>
+      <p class="score-note">Scores for this mode and difficulty · this page session</p>
       <button id="reset-scores">Reset scores</button>
     </section>
-    <p class="instructions" id="rules"><strong>Three in a row takes the win.</strong><br>X always starts. In computer mode, you play X. Changing settings starts a new round. Connect three marks across, down, or diagonally.</p>
-    </section>
+    <p class="instructions"><strong>Three pieces. One straight line.</strong><br>X starts. Each player places exactly three pieces, one per turn (an earlier line wins immediately). Then select your piece and tap a highlighted adjacent empty point on a connecting line. No jumping. All three rows, columns and the two long diagonals are winning lines. A blocked player loses. Three repetitions of the same board and turn, or 100 movement turns, draw. In computer mode you play X. Changing settings starts a new round.</p>
     <footer>No sign-ups. Just good company.</footer>
   </main>
   <script>
-    // One rules engine drives both the interface and the computer search.
+    // Tin Guti rules are shared by the interface and computer search.
     const $ = selector => document.querySelector(selector);
     const cells = Array.from(document.querySelectorAll('.cell'));
     const status = $('#status'), mode = $('#mode'), difficulty = $('#difficulty');
@@ -136,21 +114,21 @@
         neighbors[line[i + 1]].add(line[i]);
       }
     });
-    let game = 'ttt', active = false, board, currentPlayer, gameOver;
+    let board, currentPlayer, gameOver;
     let selected = null, computerTimer = null, movementTurns = 0, history = new Map();
-    const scores = {}, preferences = {};
+    const scores = {};
     const other = mark => mark === 'X' ? 'O' : 'X';
     const count = state => state.filter(Boolean).length;
-    const moving = (state, kind) => kind === 'morris' && count(state) === 6;
+    const moving = state => count(state) === 6;
     const stateKey = (state, turn) => state.map(x => x || '-').join('') + turn;
     function winnerLine(state) {
       return winningLines.find(line => state[line[0]] && line.every(i => state[i] === state[line[0]]));
     }
-    function legalMoves(state, turn, kind = game) {
+    function legalMoves(state, turn) {
       if (winnerLine(state)) return [];
       const empty = state.map((v, i) => v ? -1 : i).filter(i => i !== -1);
-      if (!moving(state, kind)) {
-        if (kind === 'morris' && state.filter(v => v === turn).length >= 3) return [];
+      if (!moving(state)) {
+        if (state.filter(v => v === turn).length >= 3) return [];
         return empty.map(to => ({ from: null, to }));
       }
       return state.flatMap((v, from) => v !== turn ? [] :
@@ -162,7 +140,7 @@
       next[move.to] = turn;
       return next;
     }
-    function scoreKey() { return `${game}:${mode.value}:${mode.value === 'computer' ? difficulty.value : ''}`; }
+    function scoreKey() { return `${mode.value}:${mode.value === 'computer' ? difficulty.value : ''}`; }
     function currentScores() { return scores[scoreKey()] ||= { X: 0, O: 0, draw: 0 }; }
     function updateScores() {
       const score = currentScores();
@@ -172,19 +150,18 @@
     }
     // A blocked player loses. Repeating board + turn three times is a draw.
     // A 100-movement-turn cap guarantees termination even without repetition.
-    function outcome(state, turn, kind, seen, steps) {
+    function outcome(state, turn, seen, steps) {
       const line = winnerLine(state);
       if (line) return { winner: state[line[0]], reason: 'Three in a row!' };
-      if (kind === 'ttt' && count(state) === 9) return { winner: 'draw', reason: 'Board full.' };
-      if (!legalMoves(state, turn, kind).length) return { winner: other(turn), reason: `${turn} has no legal moves.` };
-      if (kind === 'morris' && (seen.get(stateKey(state, turn)) || 0) >= 3)
+      if (!legalMoves(state, turn).length) return { winner: other(turn), reason: `${turn} has no legal moves.` };
+      if ((seen.get(stateKey(state, turn)) || 0) >= 3)
         return { winner: 'draw', reason: 'Same position and turn repeated three times.' };
-      if (kind === 'morris' && steps >= 100) return { winner: 'draw', reason: '100 movement turns reached.' };
+      if (steps >= 100) return { winner: 'draw', reason: '100 movement turns reached.' };
       return null;
     }
     function render() {
       const computerTurn = mode.value === 'computer' && currentPlayer === 'O';
-      const isMoving = moving(board, game), line = winnerLine(board);
+      const isMoving = moving(board), line = winnerLine(board);
       const targets = selected === null ? [] : legalMoves(board, currentPlayer).filter(m => m.from === selected).map(m => m.to);
       cells.forEach((cell, index) => {
         cell.textContent = board[index];
@@ -192,7 +169,7 @@
         if (line?.includes(index)) cell.classList.add('winner');
         if (selected === index) cell.classList.add('selected');
         if (targets.includes(index)) cell.classList.add('target');
-        cell.disabled = !active || gameOver || computerTurn || (isMoving ?
+        cell.disabled = gameOver || computerTurn || (isMoving ?
           !(board[index] === currentPlayer || targets.includes(index)) : !!board[index]);
         cell.setAttribute('aria-label', `Row ${Math.floor(index/3)+1}, column ${index%3+1}, ${board[index] || 'empty'}${selected === index ? ', selected' : ''}${targets.includes(index) ? ', legal destination' : ''}`);
         cell.setAttribute('aria-pressed', String(selected === index));
@@ -201,7 +178,7 @@
       $('#player-o').classList.toggle('active', !gameOver && currentPlayer === 'O');
       if (!gameOver) status.textContent = computerTurn ? 'Computer (O) is thinking…' :
         `${currentPlayer}'s turn — ${isMoving ? (selected === null ? 'select your piece' : 'tap a highlighted destination') : 'place a piece'}`;
-      $('#phase').textContent = game === 'ttt' ? 'Connect three marks to win.' : isMoving ?
+      $('#phase').textContent = isMoving ?
         `Move phase · ${movementTurns}/100 turns · adjacent moves only` :
         `Place phase · X: ${board.filter(v=>v==='X').length}/3 · O: ${board.filter(v=>v==='O').length}/3`;
       updateScores();
@@ -213,19 +190,19 @@
         return value + (xs ? 0 : [0,2,12,100][os]) - (os ? 0 : [0,2,12,100][xs]);
       }, 0);
     }
-    // Alpha-beta Minimax: full depth for Tic Tac Toe, 8 plies for Tin Guti.
+    // Alpha-beta Minimax searches 8 plies for Hard and 2 for Medium.
     // Search tracks actual repetition counts and the movement cap on each path.
-    function search(state, turn, kind, depth, seen, steps, alpha = -Infinity, beta = Infinity) {
-      const result = outcome(state, turn, kind, seen, steps);
+    function search(state, turn, depth, seen, steps, alpha = -Infinity, beta = Infinity) {
+      const result = outcome(state, turn, seen, steps);
       if (result) return result.winner === 'draw' ? 0 : result.winner === 'O' ? 10000 + depth : -10000 - depth;
       if (!depth) return heuristic(state);
       let best = turn === 'O' ? -Infinity : Infinity;
-      for (const move of legalMoves(state, turn, kind)) {
+      for (const move of legalMoves(state, turn)) {
         const next = applyMove(state, move, turn), nextTurn = other(turn);
         const key = stateKey(next, nextTurn), old = seen.get(key) || 0;
         seen.set(key, old + 1);
-        const value = search(next, nextTurn, kind, depth - 1, seen,
-          steps + (moving(state, kind) ? 1 : 0), alpha, beta);
+        const value = search(next, nextTurn, depth - 1, seen,
+          steps + (moving(state) ? 1 : 0), alpha, beta);
         if (old) seen.set(key, old); else seen.delete(key);
         if (turn === 'O') { best = Math.max(best, value); alpha = Math.max(alpha, best); }
         else { best = Math.min(best, value); beta = Math.min(beta, best); }
@@ -233,16 +210,16 @@
       }
       return best;
     }
-    function chooseComputerMove(state, level, kind = game, seen = history, steps = movementTurns) {
-      const moves = legalMoves(state, 'O', kind);
+    function chooseComputerMove(state, level, seen = history, steps = movementTurns) {
+      const moves = legalMoves(state, 'O');
       if (!moves.length) return null;
       if (level === 'easy') return moves[Math.floor(Math.random() * moves.length)];
       let best = -Infinity, choice = moves[0];
-      const depth = level === 'hard' ? (kind === 'ttt' ? 9 - count(state) : 8) : 2;
+      const depth = level === 'hard' ? 8 : 2;
       for (const move of moves) {
         const next = applyMove(state, move, 'O'), nextSeen = new Map(seen), key = stateKey(next, 'X');
         nextSeen.set(key, (nextSeen.get(key) || 0) + 1);
-        const value = search(next, 'X', kind, depth - 1, nextSeen, steps + (moving(state, kind) ? 1 : 0));
+        const value = search(next, 'X', depth - 1, nextSeen, steps + (moving(state) ? 1 : 0));
         if (value > best) { best = value; choice = move; }
       }
       return choice;
@@ -254,15 +231,15 @@
     }
     function commitMove(move, fromComputer = false) {
       const computerTurn = mode.value === 'computer' && currentPlayer === 'O';
-      if (!active || gameOver || computerTurn !== fromComputer || !move) return;
+      if (gameOver || computerTurn !== fromComputer || !move) return;
       if (!legalMoves(board, currentPlayer).some(m => m.from === move.from && m.to === move.to)) return;
-      if (moving(board, game)) movementTurns++;
+      if (moving(board)) movementTurns++;
       board = applyMove(board, move, currentPlayer);
       selected = null;
       currentPlayer = other(currentPlayer);
       const key = stateKey(board, currentPlayer);
       history.set(key, (history.get(key) || 0) + 1);
-      const result = outcome(board, currentPlayer, game, history, movementTurns);
+      const result = outcome(board, currentPlayer, history, movementTurns);
       if (result) finish(result);
       render();
       if (!gameOver && mode.value === 'computer' && currentPlayer === 'O') {
@@ -273,11 +250,11 @@
       }
     }
     function makeMove(index) {
-      if (!active || gameOver || (mode.value === 'computer' && currentPlayer === 'O')) return;
-      if (moving(board, game) && board[index] === currentPlayer) {
+      if (gameOver || (mode.value === 'computer' && currentPlayer === 'O')) return;
+      if (moving(board) && board[index] === currentPlayer) {
         selected = selected === index ? null : index;
         render();
-      } else commitMove({ from: moving(board, game) ? selected : null, to: index });
+      } else commitMove({ from: moving(board) ? selected : null, to: index });
     }
     function cancelComputer() { clearTimeout(computerTimer); computerTimer = null; }
     function restartGame() {
@@ -289,31 +266,10 @@
       $('#o-name').textContent = mode.value === 'computer' ? 'Computer' : 'Player two';
       render();
     }
-    function savePreferences() { preferences[game] = { mode: mode.value, difficulty: difficulty.value }; }
-    function openGame(kind) {
-      game = kind; active = true;
-      mode.value = preferences[game]?.mode || 'pvp';
-      difficulty.value = preferences[game]?.difficulty || 'easy';
-      $('#home').hidden = true; $('#game-screen').hidden = false;
-      $('#game-title').textContent = kind === 'ttt' ? 'Tic Tac Toe' : 'Tin Guti';
-      $('#board-wrap').classList.toggle('morris', kind === 'morris');
-      $('#rules').textContent = kind === 'ttt' ?
-        'X starts. Connect three marks across, down or diagonally. In computer mode, you play X. Changing settings starts a new round.' :
-        'X starts. Each player places exactly three pieces, one per turn (an earlier line wins immediately). Then select your piece and tap a highlighted adjacent empty point on a connecting line. No jumping. All three rows, columns and the two long diagonals are winning lines. A blocked player loses. Three repetitions of the same board and turn, or 100 movement turns, draw. In computer mode you play X. Changing settings starts a new round.';
-      restartGame(); $('#game-title').focus();
-    }
-    function backHome() {
-      savePreferences(); cancelComputer(); active = false; selected = null;
-      $('#game-screen').hidden = true; $('#home').hidden = false;
-      $(game === 'ttt' ? '#open-ttt' : '#open-morris').focus();
-    }
     cells.forEach((cell, i) => cell.addEventListener('click', () => makeMove(i)));
-    $('#open-ttt').addEventListener('click', () => openGame('ttt'));
-    $('#open-morris').addEventListener('click', () => openGame('morris'));
-    $('#back-home').addEventListener('click', backHome);
     $('#restart').addEventListener('click', restartGame);
-    mode.addEventListener('change', () => { savePreferences(); restartGame(); });
-    difficulty.addEventListener('change', () => { savePreferences(); restartGame(); });
+    mode.addEventListener('change', restartGame);
+    difficulty.addEventListener('change', restartGame);
     $('#reset-scores').addEventListener('click', () => {
       scores[scoreKey()] = { X: 0, O: 0, draw: 0 }; updateScores();
     });
