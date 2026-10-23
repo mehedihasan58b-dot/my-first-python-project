@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#171c2c">
-  <title>Tic Tac Toe — Your move</title>
+  <title>Little Board Games — Tic Tac Toe &amp; Tin Guti</title>
   <style>
     * { box-sizing: border-box; }
     body { margin: 0; min-height: 100svh; background: #101420; color: #f4f3ed; font-family: system-ui, sans-serif; display: grid; place-items: center; padding: 24px 16px; }
@@ -54,12 +54,37 @@
     .score-note { margin: 0; font-size: 11px; color: #a7afc1; }
     .instructions { margin-top: 24px; color: #a7afc1; font-size: 13px; line-height: 1.8; }
     .instructions strong { color: #f4f3ed; }
+    [hidden] { display: none !important; }
+    .home-card { display: block; width: 100%; padding: 24px; margin: 14px 0; text-align: left; color: #f4f3ed; background: #191f30; border: 1px solid #343b4e; border-radius: 16px; cursor: pointer; font: inherit; touch-action: manipulation; }
+    .home-card:hover { border-color: #d5ef90; }
+    .home-card strong { display: block; font-size: 22px; margin-bottom: 8px; color: #d5ef90; }
+    .home-card span { color: #b3bdcf; font-size: 14px; }
+    #back-home { min-height: 44px; border: 1px solid #343b4e; border-radius: 10px; background: #191f30; color: #c0b3f5; padding: 10px 16px; margin-bottom: 18px; cursor: pointer; font: inherit; }
+    .board-wrap { position: relative; }
+    #connections { display: none; position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+    .morris #connections { display: block; }
+    .morris .board { gap: 0; padding: 0; }
+    .morris .cell { position: relative; z-index: 1; border: 0; border-radius: 50%; background: transparent; font-size: clamp(30px, 11vw, 48px); }
+    .morris .cell::before { content: ''; position: absolute; inset: 20%; background: #1c2335; border: 2px solid #53617a; border-radius: 50%; z-index: -1; }
+    .morris .cell:not(:disabled):hover { background: transparent; transform: none; }
+    .morris .cell.selected::before { border: 4px solid #f5d87b; background: #343c36; }
+    .morris .cell.target::before { border-color: #d5ef90; background: #293c35; }
+    .morris .cell.winner::before { background: #344333; border-color: #d5ef90; }
+    #phase { color: #b3bdcf; font-size: 13px; min-height: 20px; }
   </style>
 </head>
 <body>
   <main>
-    <header><span class="eyebrow">A little friendly competition</span><h1>Tic Tac Toe<span style="color:#d5ef90">.</span></h1><p class="intro">Play with a friend or challenge the computer.</p></header>
-    <section class="game" aria-label="Tic Tac Toe game">
+    <section id="home" aria-label="Choose a game">
+      <header><span class="eyebrow">A little friendly competition</span><h1>Little board games.</h1><p class="intro">Pick a game. Make your move.</p></header>
+      <button class="home-card" id="open-ttt"><strong>Tic Tac Toe ↗</strong><span>The classic. Place your marks, connect three.</span></button>
+      <button class="home-card" id="open-morris"><strong>Tin Guti ↗</strong><span>Three Men's Morris. Place three pieces, then slide to win.</span></button>
+      <p class="instructions">Play with a friend on this device or challenge three computer difficulty levels.</p>
+    </section>
+    <section id="game-screen" hidden>
+    <button id="back-home">← Back to Home</button>
+    <header><span class="eyebrow">A little friendly competition</span><h1 id="game-title" tabindex="-1">Tic Tac Toe</h1><p class="intro">Play with a friend or challenge the computer.</p></header>
+    <section class="game" aria-label="Board game">
       <div class="settings">
         <label>Game mode<select id="mode"><option value="pvp">Player vs Player</option><option value="computer">Player vs Computer</option></select></label>
         <label>Computer difficulty<select id="difficulty" disabled><option value="easy">Easy</option><option value="medium">Medium</option><option value="hard">Hard</option></select></label>
@@ -69,6 +94,9 @@
         <div id="player-o" class="player"><span class="symbol o">O</span> <span id="o-name">Player two</span></div>
       </div>
       <p id="status" role="status" aria-live="polite" aria-atomic="true">X's turn — you're up!</p>
+      <p id="phase"></p>
+      <div class="board-wrap" id="board-wrap">
+      <svg id="connections" viewBox="0 0 300 300" aria-hidden="true"><g stroke="#53617a" stroke-width="3" fill="none"><path d="M50 50H250 M50 150H250 M50 250H250 M50 50V250 M150 50V250 M250 50V250 M50 50L250 250 M250 50L50 250"/></g></svg>
       <div class="board" role="group" aria-label="Game board, three rows and three columns">
         <button class="cell" aria-label="Row 1, column 1, empty"></button>
         <button class="cell" aria-label="Row 1, column 2, empty"></button>
@@ -80,157 +108,214 @@
         <button class="cell" aria-label="Row 3, column 2, empty"></button>
         <button class="cell" aria-label="Row 3, column 3, empty"></button>
       </div>
+      </div>
       <button id="restart">↻ &nbsp; Restart game</button>
       <div class="scoreboard" role="group" aria-label="Scoreboard">
         <div>X wins<strong id="score-x">0</strong></div>
         <div>Draws<strong id="score-draw">0</strong></div>
         <div>O wins<strong id="score-o">0</strong></div>
       </div>
-      <p class="score-note">Scores for this mode and difficulty · this page session</p>
+      <p class="score-note">Scores for this game, mode and difficulty · this page session</p>
       <button id="reset-scores">Reset scores</button>
     </section>
-    <p class="instructions"><strong>Three in a row takes the win.</strong><br>X always starts. In computer mode, you play X. Changing settings starts a new round. Connect three marks across, down, or diagonally.</p>
+    <p class="instructions" id="rules"><strong>Three in a row takes the win.</strong><br>X always starts. In computer mode, you play X. Changing settings starts a new round. Connect three marks across, down, or diagonally.</p>
+    </section>
     <footer>No sign-ups. Just good company.</footer>
   </main>
   <script>
-    // Game state: the nine squares run from top-left to bottom-right.
+    // One rules engine drives both the interface and the computer search.
+    const $ = selector => document.querySelector(selector);
     const cells = Array.from(document.querySelectorAll('.cell'));
-    const status = document.querySelector('#status');
-    const mode = document.querySelector('#mode');
-    const difficulty = document.querySelector('#difficulty');
-    const winningLines = [
-      [0, 1, 2], [3, 4, 5], [6, 7, 8],
-      [0, 3, 6], [1, 4, 7], [2, 5, 8],
-      [0, 4, 8], [2, 4, 6]
-    ];
-    let board = Array(9).fill('');
-    let currentPlayer = 'X';
-    let gameOver = false;
-    let computerTimer = null;
-    // Keep separate scores so different opponents/difficulties are not mixed.
-    const scores = {};
-    function scoreKey() {
-      return mode.value === 'pvp' ? 'pvp' : difficulty.value;
+    const status = $('#status'), mode = $('#mode'), difficulty = $('#difficulty');
+    const winningLines = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+    // Only consecutive points on a drawn line are adjacent. No jumping.
+    const neighbors = Array.from({ length: 9 }, () => new Set());
+    winningLines.forEach(line => {
+      for (let i = 0; i < 2; i++) {
+        neighbors[line[i]].add(line[i + 1]);
+        neighbors[line[i + 1]].add(line[i]);
+      }
+    });
+    let game = 'ttt', active = false, board, currentPlayer, gameOver;
+    let selected = null, computerTimer = null, movementTurns = 0, history = new Map();
+    const scores = {}, preferences = {};
+    const other = mark => mark === 'X' ? 'O' : 'X';
+    const count = state => state.filter(Boolean).length;
+    const moving = (state, kind) => kind === 'morris' && count(state) === 6;
+    const stateKey = (state, turn) => state.map(x => x || '-').join('') + turn;
+    function winnerLine(state) {
+      return winningLines.find(line => state[line[0]] && line.every(i => state[i] === state[line[0]]));
     }
-    function currentScores() {
-      return scores[scoreKey()] ||= { X: 0, O: 0, draw: 0 };
+    function legalMoves(state, turn, kind = game) {
+      if (winnerLine(state)) return [];
+      const empty = state.map((v, i) => v ? -1 : i).filter(i => i !== -1);
+      if (!moving(state, kind)) {
+        if (kind === 'morris' && state.filter(v => v === turn).length >= 3) return [];
+        return empty.map(to => ({ from: null, to }));
+      }
+      return state.flatMap((v, from) => v !== turn ? [] :
+        [...neighbors[from]].filter(to => !state[to]).map(to => ({ from, to })));
     }
+    function applyMove(state, move, turn) {
+      const next = state.slice();
+      if (move.from !== null) next[move.from] = '';
+      next[move.to] = turn;
+      return next;
+    }
+    function scoreKey() { return `${game}:${mode.value}:${mode.value === 'computer' ? difficulty.value : ''}`; }
+    function currentScores() { return scores[scoreKey()] ||= { X: 0, O: 0, draw: 0 }; }
     function updateScores() {
       const score = currentScores();
-      document.querySelector('#score-x').textContent = score.X;
-      document.querySelector('#score-o').textContent = score.O;
-      document.querySelector('#score-draw').textContent = score.draw;
+      $('#score-x').textContent = score.X;
+      $('#score-o').textContent = score.O;
+      $('#score-draw').textContent = score.draw;
     }
-    function winnerLine(state) {
-      return winningLines.find(line => state[line[0]] &&
-        line.every(index => state[index] === state[line[0]]));
-    }
-    function emptySquares(state) {
-      return state.map((value, index) => value === '' ? index : -1).filter(index => index !== -1);
-    }
-    function labelFor(index, value) {
-      return `Row ${Math.floor(index / 3) + 1}, column ${index % 3 + 1}, ${value || 'empty'}`;
+    // A blocked player loses. Repeating board + turn three times is a draw.
+    // A 100-movement-turn cap guarantees termination even without repetition.
+    function outcome(state, turn, kind, seen, steps) {
+      const line = winnerLine(state);
+      if (line) return { winner: state[line[0]], reason: 'Three in a row!' };
+      if (kind === 'ttt' && count(state) === 9) return { winner: 'draw', reason: 'Board full.' };
+      if (!legalMoves(state, turn, kind).length) return { winner: other(turn), reason: `${turn} has no legal moves.` };
+      if (kind === 'morris' && (seen.get(stateKey(state, turn)) || 0) >= 3)
+        return { winner: 'draw', reason: 'Same position and turn repeated three times.' };
+      if (kind === 'morris' && steps >= 100) return { winner: 'draw', reason: '100 movement turns reached.' };
+      return null;
     }
     function render() {
       const computerTurn = mode.value === 'computer' && currentPlayer === 'O';
-      const line = winnerLine(board);
+      const isMoving = moving(board, game), line = winnerLine(board);
+      const targets = selected === null ? [] : legalMoves(board, currentPlayer).filter(m => m.from === selected).map(m => m.to);
       cells.forEach((cell, index) => {
         cell.textContent = board[index];
         cell.className = 'cell' + (board[index] ? ' ' + board[index].toLowerCase() : '');
         if (line?.includes(index)) cell.classList.add('winner');
-        cell.disabled = gameOver || !!board[index] || computerTurn;
-        cell.setAttribute('aria-label', labelFor(index, board[index]));
+        if (selected === index) cell.classList.add('selected');
+        if (targets.includes(index)) cell.classList.add('target');
+        cell.disabled = !active || gameOver || computerTurn || (isMoving ?
+          !(board[index] === currentPlayer || targets.includes(index)) : !!board[index]);
+        cell.setAttribute('aria-label', `Row ${Math.floor(index/3)+1}, column ${index%3+1}, ${board[index] || 'empty'}${selected === index ? ', selected' : ''}${targets.includes(index) ? ', legal destination' : ''}`);
+        cell.setAttribute('aria-pressed', String(selected === index));
       });
-      document.querySelector('#player-x').classList.toggle('active', !gameOver && currentPlayer === 'X');
-      document.querySelector('#player-o').classList.toggle('active', !gameOver && currentPlayer === 'O');
-      if (!gameOver) status.textContent = computerTurn ? 'Computer is thinking…' : `${currentPlayer}'s turn — you're up!`;
+      $('#player-x').classList.toggle('active', !gameOver && currentPlayer === 'X');
+      $('#player-o').classList.toggle('active', !gameOver && currentPlayer === 'O');
+      if (!gameOver) status.textContent = computerTurn ? 'Computer (O) is thinking…' :
+        `${currentPlayer}'s turn — ${isMoving ? (selected === null ? 'select your piece' : 'tap a highlighted destination') : 'place a piece'}`;
+      $('#phase').textContent = game === 'ttt' ? 'Connect three marks to win.' : isMoving ?
+        `Move phase · ${movementTurns}/100 turns · adjacent moves only` :
+        `Place phase · X: ${board.filter(v=>v==='X').length}/3 · O: ${board.filter(v=>v==='O').length}/3`;
       updateScores();
     }
-    // Try placing a mark in each empty square to find an immediate win.
-    function immediateMove(state, mark) {
-      return emptySquares(state).find(index => {
-        const next = state.slice();
-        next[index] = mark;
-        return !!winnerLine(next);
-      });
+    function heuristic(state) {
+      return winningLines.reduce((value, line) => {
+        const xs = line.filter(i => state[i] === 'X').length;
+        const os = line.filter(i => state[i] === 'O').length;
+        return value + (xs ? 0 : [0,2,12,100][os]) - (os ? 0 : [0,2,12,100][xs]);
+      }, 0);
     }
-    // Minimax explores every possible continuation. O maximizes; X minimizes.
-    function minimax(state, turn, depth = 0) {
-      const line = winnerLine(state);
-      if (line) return state[line[0]] === 'O' ? 10 - depth : depth - 10;
-      const available = emptySquares(state);
-      if (!available.length) return 0;
-      const values = available.map(index => {
-        const next = state.slice();
-        next[index] = turn;
-        return minimax(next, turn === 'O' ? 'X' : 'O', depth + 1);
-      });
-      return turn === 'O' ? Math.max(...values) : Math.min(...values);
-    }
-    function chooseComputerMove(state, level) {
-      const available = emptySquares(state);
-      if (!available.length || winnerLine(state)) return undefined;
-      if (level === 'hard') {
-        let bestScore = -Infinity;
-        let bestMove = available[0];
-        available.forEach(index => {
-          const next = state.slice();
-          next[index] = 'O';
-          const score = minimax(next, 'X');
-          if (score > bestScore) { bestScore = score; bestMove = index; }
-        });
-        return bestMove;
+    // Alpha-beta Minimax: full depth for Tic Tac Toe, 8 plies for Tin Guti.
+    // Search tracks actual repetition counts and the movement cap on each path.
+    function search(state, turn, kind, depth, seen, steps, alpha = -Infinity, beta = Infinity) {
+      const result = outcome(state, turn, kind, seen, steps);
+      if (result) return result.winner === 'draw' ? 0 : result.winner === 'O' ? 10000 + depth : -10000 - depth;
+      if (!depth) return heuristic(state);
+      let best = turn === 'O' ? -Infinity : Infinity;
+      for (const move of legalMoves(state, turn, kind)) {
+        const next = applyMove(state, move, turn), nextTurn = other(turn);
+        const key = stateKey(next, nextTurn), old = seen.get(key) || 0;
+        seen.set(key, old + 1);
+        const value = search(next, nextTurn, kind, depth - 1, seen,
+          steps + (moving(state, kind) ? 1 : 0), alpha, beta);
+        if (old) seen.set(key, old); else seen.delete(key);
+        if (turn === 'O') { best = Math.max(best, value); alpha = Math.max(alpha, best); }
+        else { best = Math.min(best, value); beta = Math.min(beta, best); }
+        if (beta <= alpha) break;
       }
-      if (level === 'medium') {
-        const win = immediateMove(state, 'O');
-        if (win !== undefined) return win;
-        const block = immediateMove(state, 'X');
-        if (block !== undefined) return block;
-      }
-      return available[Math.floor(Math.random() * available.length)];
+      return best;
     }
-    function makeMove(index, fromComputer = false) {
+    function chooseComputerMove(state, level, kind = game, seen = history, steps = movementTurns) {
+      const moves = legalMoves(state, 'O', kind);
+      if (!moves.length) return null;
+      if (level === 'easy') return moves[Math.floor(Math.random() * moves.length)];
+      let best = -Infinity, choice = moves[0];
+      const depth = level === 'hard' ? (kind === 'ttt' ? 9 - count(state) : 8) : 2;
+      for (const move of moves) {
+        const next = applyMove(state, move, 'O'), nextSeen = new Map(seen), key = stateKey(next, 'X');
+        nextSeen.set(key, (nextSeen.get(key) || 0) + 1);
+        const value = search(next, 'X', kind, depth - 1, nextSeen, steps + (moving(state, kind) ? 1 : 0));
+        if (value > best) { best = value; choice = move; }
+      }
+      return choice;
+    }
+    function finish(result) {
+      gameOver = true;
+      currentScores()[result.winner]++;
+      status.textContent = result.winner === 'draw' ? `Draw! ${result.reason}` : `${result.winner} wins! ${result.reason}`;
+    }
+    function commitMove(move, fromComputer = false) {
       const computerTurn = mode.value === 'computer' && currentPlayer === 'O';
-      if (gameOver || board[index] !== '' || computerTurn !== fromComputer) return;
-      board[index] = currentPlayer;
-      const line = winnerLine(board);
-      if (line) {
-        gameOver = true;
-        currentScores()[currentPlayer]++;
-        status.textContent = `${currentPlayer} wins! Nicely played 🎉`;
-      } else if (!emptySquares(board).length) {
-        gameOver = true;
-        currentScores().draw++;
-        status.textContent = "It's a draw! Another round? 🤝";
-      } else {
-        currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
-      }
+      if (!active || gameOver || computerTurn !== fromComputer || !move) return;
+      if (!legalMoves(board, currentPlayer).some(m => m.from === move.from && m.to === move.to)) return;
+      if (moving(board, game)) movementTurns++;
+      board = applyMove(board, move, currentPlayer);
+      selected = null;
+      currentPlayer = other(currentPlayer);
+      const key = stateKey(board, currentPlayer);
+      history.set(key, (history.get(key) || 0) + 1);
+      const result = outcome(board, currentPlayer, game, history, movementTurns);
+      if (result) finish(result);
       render();
       if (!gameOver && mode.value === 'computer' && currentPlayer === 'O') {
         computerTimer = setTimeout(() => {
           computerTimer = null;
-          makeMove(chooseComputerMove(board, difficulty.value), true);
-        }, 350);
+          commitMove(chooseComputerMove(board, difficulty.value), true);
+        }, 250);
       }
     }
+    function makeMove(index) {
+      if (!active || gameOver || (mode.value === 'computer' && currentPlayer === 'O')) return;
+      if (moving(board, game) && board[index] === currentPlayer) {
+        selected = selected === index ? null : index;
+        render();
+      } else commitMove({ from: moving(board, game) ? selected : null, to: index });
+    }
+    function cancelComputer() { clearTimeout(computerTimer); computerTimer = null; }
     function restartGame() {
-      // Cancel pending computer moves when restarting or changing settings.
-      clearTimeout(computerTimer);
-      computerTimer = null;
-      board = Array(9).fill('');
-      currentPlayer = 'X';
-      gameOver = false;
+      cancelComputer();
+      board = Array(9).fill(''); currentPlayer = 'X'; gameOver = false;
+      selected = null; movementTurns = 0;
+      history = new Map([[stateKey(board, currentPlayer), 1]]);
       difficulty.disabled = mode.value === 'pvp';
-      document.querySelector('#o-name').textContent = mode.value === 'computer' ? 'Computer' : 'Player two';
+      $('#o-name').textContent = mode.value === 'computer' ? 'Computer' : 'Player two';
       render();
     }
-    cells.forEach((cell, index) => cell.addEventListener('click', () => makeMove(index)));
-    document.querySelector('#restart').addEventListener('click', restartGame);
-    mode.addEventListener('change', restartGame);
-    difficulty.addEventListener('change', restartGame);
-    document.querySelector('#reset-scores').addEventListener('click', () => {
-      scores[scoreKey()] = { X: 0, O: 0, draw: 0 };
-      updateScores();
+    function savePreferences() { preferences[game] = { mode: mode.value, difficulty: difficulty.value }; }
+    function openGame(kind) {
+      game = kind; active = true;
+      mode.value = preferences[game]?.mode || 'pvp';
+      difficulty.value = preferences[game]?.difficulty || 'easy';
+      $('#home').hidden = true; $('#game-screen').hidden = false;
+      $('#game-title').textContent = kind === 'ttt' ? 'Tic Tac Toe' : 'Tin Guti';
+      $('#board-wrap').classList.toggle('morris', kind === 'morris');
+      $('#rules').textContent = kind === 'ttt' ?
+        'X starts. Connect three marks across, down or diagonally. In computer mode, you play X. Changing settings starts a new round.' :
+        'X starts. Each player places exactly three pieces, one per turn (an earlier line wins immediately). Then select your piece and tap a highlighted adjacent empty point on a connecting line. No jumping. All three rows, columns and the two long diagonals are winning lines. A blocked player loses. Three repetitions of the same board and turn, or 100 movement turns, draw. In computer mode you play X. Changing settings starts a new round.';
+      restartGame(); $('#game-title').focus();
+    }
+    function backHome() {
+      savePreferences(); cancelComputer(); active = false; selected = null;
+      $('#game-screen').hidden = true; $('#home').hidden = false;
+      $(game === 'ttt' ? '#open-ttt' : '#open-morris').focus();
+    }
+    cells.forEach((cell, i) => cell.addEventListener('click', () => makeMove(i)));
+    $('#open-ttt').addEventListener('click', () => openGame('ttt'));
+    $('#open-morris').addEventListener('click', () => openGame('morris'));
+    $('#back-home').addEventListener('click', backHome);
+    $('#restart').addEventListener('click', restartGame);
+    mode.addEventListener('change', () => { savePreferences(); restartGame(); });
+    difficulty.addEventListener('change', () => { savePreferences(); restartGame(); });
+    $('#reset-scores').addEventListener('click', () => {
+      scores[scoreKey()] = { X: 0, O: 0, draw: 0 }; updateScores();
     });
     restartGame();
   </script>
