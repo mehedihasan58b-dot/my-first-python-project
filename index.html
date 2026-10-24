@@ -41,8 +41,6 @@
     @keyframes settle { from { transform: scale(.7); opacity: .5; } to { transform: scale(1); opacity: 1; } }
     .cell.captured::after { content: ''; position: absolute; inset: 25%; border-radius: 50%; border: 2px solid #ffe4a0; animation: capture-ring .35s ease-out both; pointer-events:none; }
     @keyframes capture-ring { to { transform: scale(1.6); opacity:0; } }
-    .board-wrap.twelve .cell .token { width: 74%; border-width: 2px; }
-    .board-wrap.twelve .cell::before { width: 23%; }
     @media(max-width: 400px) { .palette-options { grid-template-columns: repeat(2,1fr); } .board-frame { padding: 8px; } .cell.selected .token { outline-offset: 1px; } }
     .gold-button, .secondary-button { border: 1px solid #f4cd7c; border-radius: 12px; padding: 13px 20px; min-height: 48px; color: #fff3d6; font: 700 14px system-ui, sans-serif; background: linear-gradient(#ba7c24,#764006); box-shadow: inset 0 1px 2px #fff7, 0 4px 0 #301809, 0 7px 15px #0005; }
     .gold-button:hover { filter: brightness(1.13); }
@@ -69,10 +67,10 @@
     #connections { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
     .board { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(var(--board-size,3),1fr); grid-template-rows: repeat(var(--board-size,3),1fr); }
     .cell { position: relative; border: 0; border-radius: 50%; background: transparent; min-width: 0; padding: 0; display: grid; place-items: center; -webkit-tap-highlight-color: transparent; }
-    .cell::before { content: ''; position: absolute; width: 28%; aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle,#482a1c,#241309); border: 2px solid #f4c87e; box-shadow: 0 0 0 2px #61360f,0 2px 4px #0009; }
+    .cell::before { content: ''; position: absolute; width: calc(var(--board-size,3) * 4%); aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle,#482a1c,#241309); border: 2px solid #f4c87e; box-shadow: 0 0 0 2px #61360f,0 2px 4px #0009; }
     .token { --piece: var(--top); --light: var(--top-light); --dark: var(--top-dark); position: relative; display: grid; place-items: center; aspect-ratio: 1; border-radius: 50%; border: 3px solid #ebbb5b; background: radial-gradient(ellipse at 27% 18%,#fff9 0 3%,transparent 17%),radial-gradient(circle at 36% 30%,var(--light),var(--piece) 42%,var(--dark) 74%); box-shadow: inset 0 0 0 2px #632e05,inset 0 0 0 5px #f4cd6b99,inset -3px -5px 6px #000a,0 4px 0 #6e3b0c,0 7px 7px #0009; }
     .token.o { --piece: var(--bottom); --light: var(--bottom-light); --dark: var(--bottom-dark); }
-    .cell .token { width: 65%; z-index: 1; transition: transform .18s; }
+    .cell .token { width: calc(var(--board-size,3) * 9%); border-width: 2px; z-index: 1; transition: transform .18s; }
     .flower { width: 77%; height: 77%; color: #f3cc66; filter: drop-shadow(0 1px 1px #482007); }
     .cell.selected .token { outline: 3px solid #fff6b4; outline-offset: 5px; transform: translateY(-4px); }
     .cell.target::before { background: radial-gradient(circle,#e8eb9b,#8a9c40); box-shadow: 0 0 0 5px #ffed8a88,0 0 20px #fff9; }
@@ -85,17 +83,49 @@
     footer { text-align: center; color: #a88a63; font-size: 11px; margin-top: 30px; }
     .svg-library { position: absolute; width: 0; height: 0; overflow: hidden; }
     @media(max-width: 560px) { body { padding: 16px 12px 28px; } .game-top { gap: 6px; grid-template-columns: 1fr 1fr 1fr; } .score-card { flex-direction: column; gap: 7px; padding: 10px 4px; border-radius: 14px; } .score-card .token { width: 38px; height: 38px; } .score-card strong { margin-top: 2px; font-size: 23px; } .game-top .brand h1 { font-size: clamp(16px,4.5vw,25px); } .game-top .brand .eyebrow { font-size: 8px; letter-spacing: .08em; } .board-frame { padding: 12px; } .cell .token { border-width: 2px; } .toolbar { justify-content: center; } .settings { gap: 18px 12px; } }
+    /* Visible pieces occupy 9% of board width in BOTH games. The full cell
+       remains the invisible touch target (at least 44px at 320px viewports). */
+    .cell .token.capture-ghost { position: absolute; pointer-events: none; animation: captured-piece .38s ease-out forwards; }
+    @keyframes captured-piece { from { transform: scale(1); opacity: .85; } to { transform: scale(.15) translateY(-20px); opacity: 0; } }
+    #selection-screen { padding: clamp(12px,3vw,28px) 0; }
+    .selection-heading { margin: 16px auto 38px; max-width: 720px; }
+    .selection-heading h1 { font-size: clamp(35px,6vw,64px); margin: 14px 0; }
+    .selection-heading::before, .selection-heading::after { content: '✦  ❧  ✦'; display: block; color: #d3a151; letter-spacing: 12px; font-size: 16px; margin: 15px 0; }
+    .game-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 26px; }
+    .game-card { display: flex; flex-direction: column; align-items: center; width: 100%; padding: 25px 24px; color: #ffdf9a; text-align: center; transition: transform .2s, box-shadow .2s, border-color .2s; }
+    .game-card:hover, .game-card:focus-visible { transform: translateY(-5px); border-color: #ffdd92; box-shadow: inset 0 0 0 4px #1d0d08,0 0 35px #dea54944,0 22px 40px #0009; }
+    .game-card:active { transform: translateY(-1px); }
+    .game-card[aria-pressed="true"] { border-color: #ffe3a0; box-shadow: inset 0 0 0 4px #1d0d08,inset 0 0 0 6px #ad783d,0 0 25px #b9793038,0 16px 35px #0008; }
+    .card-kicker { font: 600 10px system-ui,sans-serif; letter-spacing: .16em; text-transform: uppercase; color: #d1ae7a; }
+    .mini-board { display: block; width: min(100%,280px); aspect-ratio: 1; margin: 24px 0; border: 6px solid #62351e; border-radius: 13px; box-shadow: 0 0 0 1px #e0af65,0 6px 0 #29130b,0 13px 18px #0008; overflow: hidden; }
+    .mini-board svg { display: block; width: 100%; height: 100%; }
+    .card-title { display: block; font-size: clamp(24px,3vw,32px); color: #ffe0a0; }
+    .card-description { display: block; font: 13px/1.8 system-ui,sans-serif; color: #d1b48c; margin: 12px 0; }
+    .card-facts { display: block; font: 10px system-ui,sans-serif; text-transform: uppercase; letter-spacing: .08em; color: #b99a6e; margin-bottom: 24px; }
+    .select-label { display: block; align-self: stretch; border: 1px solid #edca81; border-radius: 9px; padding: 14px; color: #fff0c6; background: linear-gradient(#b27b30,#77430f); box-shadow: inset 0 1px #ffe5ad88,0 3px 0 #261307; font: 700 14px system-ui,sans-serif; }
+    .selection-note { text-align: center; font: 12px/1.7 system-ui,sans-serif; color: #c4a376; margin-top: 32px; }
+    #setup-screen .brand h1 { font-size: clamp(30px,6vw,48px); }
+    .setup-back { display: block; width: 100%; margin-top: 20px; padding: 12px; min-height: 44px; border: 0; background: transparent; color: #d6b47b; font: 13px system-ui,sans-serif; }
+    @media(max-width: 640px) { .game-cards { grid-template-columns: 1fr; gap: 24px; max-width: 410px; margin: auto; } .game-card { padding: 24px; } .selection-heading { margin-bottom: 24px; } }
     @media(prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
   </style>
 </head>
 <body>
   <svg class="svg-library" aria-hidden="true"><defs><g id="petal-flower" fill="none" stroke="currentColor" stroke-width="1.7"><g id="petals"><path d="M50 44 Q35 29 50 12 Q65 29 50 44Z"/><path d="M50 44 Q35 29 50 12 Q65 29 50 44Z" transform="rotate(45 50 50)"/><path d="M50 44 Q35 29 50 12 Q65 29 50 44Z" transform="rotate(90 50 50)"/><path d="M50 44 Q35 29 50 12 Q65 29 50 44Z" transform="rotate(135 50 50)"/><path d="M50 44 Q35 29 50 12 Q65 29 50 44Z" transform="rotate(180 50 50)"/><path d="M50 44 Q35 29 50 12 Q65 29 50 44Z" transform="rotate(225 50 50)"/><path d="M50 44 Q35 29 50 12 Q65 29 50 44Z" transform="rotate(270 50 50)"/><path d="M50 44 Q35 29 50 12 Q65 29 50 44Z" transform="rotate(315 50 50)"/></g><circle cx="50" cy="50" r="7"/><circle cx="50" cy="50" r="29" stroke-opacity=".3"/></g></defs></svg>
   <main>
-    <section id="setup-screen" class="wood-panel" aria-labelledby="setup-title">
-      <header class="brand"><span class="eyebrow">A timeless little rivalry</span><h1>Woodland Classics</h1><p>Two timeless games. One beautiful table.</p></header>
+    <section id="selection-screen" aria-labelledby="selection-title">
+      <header class="selection-heading brand"><span class="eyebrow">Woodland Classics · The strategy collection</span><h1 id="selection-title" tabindex="-1">Choose Your Game</h1><p>Beautiful boards. Timeless rivalries. Make your move.</p></header>
+      <div class="game-cards">
+        <button id="select-morris" class="game-card wood-panel" data-game="morris" aria-pressed="true"><span class="card-kicker">01 · The classic duel</span><span id="preview-morris" class="mini-board" aria-hidden="true"></span><span class="card-title">Three Men's Morris</span><span class="card-description">Three pieces each. Four winning lines.<br>One clever move can change everything.</span><span class="card-facts">9 intersections · Quick strategy</span><span class="select-label">Select Game →</span></button>
+        <button id="select-twelve" class="game-card wood-panel" data-game="twelve" aria-pressed="false"><span class="card-kicker">02 · The capture challenge</span><span id="preview-twelve" class="mini-board" aria-hidden="true"></span><span class="card-title">Twelve Guti</span><span class="card-description">Twelve pieces each. Plan your path.<br>Chain your captures and claim the board.</span><span class="card-facts">25 intersections · Chained captures</span><span class="select-label">Select Game →</span></button>
+      </div>
+      <p class="selection-note">Play together or challenge the computer · No account needed</p>
+    </section>
+    <section id="setup-screen" hidden class="wood-panel" aria-labelledby="setup-title">
+      <header class="brand"><span class="eyebrow">A timeless little rivalry</span><h1 id="setup-game-title">Three Men's Morris</h1><p>Prepare your next friendly rivalry.</p></header>
       <div class="setup-heading"><h2 id="setup-title" tabindex="-1">Game Setup</h2><p>Choose your opponent, pick your pieces, and take a seat.</p></div>
       <div class="settings">
-        <label>Choose a game<select id="game"><option value="morris">Three Men's Morris</option><option value="twelve">Twelve Guti</option></select></label>
+        <input id="game" type="hidden" value="morris">
         <label>Game mode<select id="mode"><option value="pvp">Player vs Player</option><option value="computer">Player vs Computer</option></select></label>
         <label id="difficulty-field" hidden>Computer difficulty<select id="difficulty" disabled><option value="easy">Easy</option><option value="medium">Medium</option><option value="hard">Hard</option></select></label>
         <label>Piece color set<select id="colors"><option value="redblue">Red vs Blue</option><option value="greengold">Green vs Gold</option><option value="blackwhite">Black vs White</option><option value="purplesilver">Purple vs Silver</option><option value="browncream">Brown vs Cream</option><option value="orangesky">Orange vs Sky Blue</option></select></label>
@@ -105,6 +135,7 @@
       <div class="setup-audio"><label><input id="setup-sound" type="checkbox" checked>Sound effects</label><label><input id="setup-music" type="checkbox">Background music</label></div>
       <p id="starter-hint" class="score-note">Player 1 starts match 1. The first turn alternates after each completed match.</p>
       <button id="play-game" class="gold-button">Play Game →</button>
+      <button id="back-selection" class="setup-back">← Back to Game Selection</button>
     </section>
     <section id="game-screen" hidden aria-label="Board game">
       <header class="game-top">
@@ -119,10 +150,10 @@
       </div></div>
       <p id="status" role="status" aria-live="polite" aria-atomic="true"></p><p id="phase"></p>
       <div class="game-actions"><button id="back-setup" class="secondary-button">← Back to Setup</button><button id="restart" class="gold-button">↻ Restart</button><button id="next-match" class="gold-button" hidden>Next Match →</button></div>
-      <p class="score-note">Separate session scores for each game, mode, difficulty and side</p><button id="reset-scores">Reset scores</button>
+      <p class="score-note">Saved scores for each game, mode, difficulty and side</p><button id="reset-scores">Reset scores</button>
       <details><summary>How to play</summary><p id="game-rules"></p></details>
     </section>
-    <p id="audio-note">Audio starts after your first tap. Music is optional.</p>
+    <p id="audio-note" hidden>Audio starts after your first tap. Music is optional.</p>
     <footer>Made for a little friendly competition.</footer>
   </main>
   <script>
@@ -295,7 +326,7 @@
     };
     let config = {game:'morris',mode:'pvp',level:'easy',side:'X'};
     let currentPalette='redblue', active=false, board=[], turn='X', selected=null, forced=null, gameOver=false;
-    let quiet=0, turnNumber=0, captureInTurn=false, history=new Map(), lastMove=null, lastCaptured=null;
+    let quiet=0, turnNumber=0, captureInTurn=false, history=new Map(), lastMove=null, lastCaptured=null, lastCapturedColor=null;
     const scores={}, completed={morris:0,twelve:0};
     let cells=[], aiTimer=null, aiWorker=null, aiURL=null, aiVersion=0, aiPlan=[];
     const computerSide = () => rules.other(config.side);
@@ -305,6 +336,20 @@
     const scoreKey = () => `${config.game}:${config.mode}:${config.mode==='computer'?config.level:''}:${config.side}`;
     const currentScores = () => scores[scoreKey()] ||= {X:0,O:0,draw:0};
     const preferenceKey='woodland-classics-preferences-v1';
+    const resultsKey='woodland-classics-results-v1';
+    function saveResults() {
+      try { localStorage.setItem(resultsKey,JSON.stringify({scores,completed})); } catch { /* Keep playing with in-memory results. */ }
+    }
+    function loadResults() {
+      try {
+        const data=JSON.parse(localStorage.getItem(resultsKey)||'{}');
+        const valid=n=>Number.isSafeInteger(n)&&n>=0&&n<=1000000000;
+        if(data.completed)for(const game of ['morris','twelve'])if(valid(data.completed[game]))completed[game]=data.completed[game];
+        if(data.scores&&typeof data.scores==='object')for(const [key,value] of Object.entries(data.scores)){
+          if(/^(morris|twelve):(pvp:|computer:(easy|medium|hard)):[XO]$/.test(key)&&value&&['X','O','draw'].every(mark=>valid(value[mark])))scores[key]={X:value.X,O:value.O,draw:value.draw};
+        }
+      } catch { /* Ignore malformed, unavailable or outdated local data. */ }
+    }
     function savePreferences() {
       try { localStorage.setItem(preferenceKey,JSON.stringify({game:$('#game').value,mode:$('#mode').value,level:$('#difficulty').value,palette:$('#colors').value,side:$('#side').value,sound:soundEnabled,music:musicEnabled})); } catch { /* Private storage may be unavailable. */ }
     }
@@ -368,6 +413,7 @@
         if (winning?.includes(i)) cell.classList.add('winner');
         if (lastCaptured===i) cell.classList.add('captured');
         cell.innerHTML=board[i]?`<span class="token ${board[i].toLowerCase()}${lastMove===i?' moved':''}" aria-hidden="true">${tokenArtwork}</span>`:'';
+        if(lastCaptured===i&&lastCapturedColor)cell.innerHTML+=`<span class="token ${lastCapturedColor.toLowerCase()} capture-ghost" aria-hidden="true">${tokenArtwork}</span>`;
         cell.disabled=!active||gameOver||computer||!(legal.some(m=>m.from===i)||targets.includes(i));
         cell.setAttribute('aria-label',`Row ${Math.floor(i/n)+1}, column ${i%n+1}, ${board[i]?playerName(board[i]):'empty'}${selected===i?', selected':''}${targets.includes(i)?', legal destination':''}`);
         cell.setAttribute('aria-pressed',String(selected===i));
@@ -387,11 +433,11 @@
       }
       $('#phase').textContent=`Match ${completed[config.game]+(gameOver?0:1)} · Turn ${turnNumber+1}${config.game==='morris'?` · ${quiet}/100 moves`:` · ${board.filter(Boolean).length} pieces remaining`}`;
       $('#next-match').hidden=!gameOver;
-      lastMove=null;lastCaptured=null;
+      lastMove=null;lastCaptured=null;lastCapturedColor=null;
     }
     function finish(result) {
       if (gameOver) return;
-      gameOver=true;completed[config.game]++;currentScores()[result.winner]++;
+      gameOver=true;completed[config.game]++;currentScores()[result.winner]++;saveResults();
       cancelComputer();updateStarterHint();
       playSound(result.winner==='draw'?'draw':config.mode==='computer'&&result.winner===computerSide()?'lose':'win');
       $('#status').textContent=result.winner==='draw'?`Draw! ${result.reason}`:`${ownerName(result.winner)} wins! ${result.reason}`;
@@ -401,6 +447,7 @@
       const legal=rules.moves(config.game,board,turn,forced);
       const step=legal.find(m=>m.from===move.from&&m.to===move.to&&m.captured===move.captured);
       if (!step) return false;
+      lastCapturedColor=step.captured===null?null:board[step.captured];
       board=rules.apply(board,step,turn);lastMove=step.to;lastCaptured=step.captured;
       captureInTurn ||= step.captured!==null;
       if (step.captured!==null && rules.captures(config.game,board,turn,step.to).length) {
@@ -452,13 +499,36 @@
     }
     function restartGame() {
       cancelComputer();board=rules.initial(config.game);turn=completed[config.game]%2===0?config.side:rules.other(config.side);
-      gameOver=false;forced=null;selected=null;quiet=0;turnNumber=0;captureInTurn=false;lastMove=null;lastCaptured=null;
+      gameOver=false;forced=null;selected=null;quiet=0;turnNumber=0;captureInTurn=false;lastMove=null;lastCaptured=null;lastCapturedColor=null;
       history=new Map([[rules.key(board,turn),1]]);updateStarterHint();render();scheduleComputer();
+    }
+    function buildGamePreviews() {
+      for(const game of ['morris','twelve']) {
+        const n=rules.size(game),position=rules.initial(game),point=i=>[150/n+(i%n)*300/n,150/n+Math.floor(i/n)*300/n];
+        let lines='',pieces='';
+        rules.graphs[game].forEach((neighbors,from)=>neighbors.forEach(to=>{if(from<to){const a=point(from),b=point(to);lines+=`M${a[0]} ${a[1]}L${b[0]} ${b[1]} `;}}));
+        position.forEach((mark,i)=>{const [x,y]=point(i);pieces+=mark?`<g><circle cx="${x}" cy="${y+2}" r="13.5" fill="#40200b"/><circle cx="${x}" cy="${y}" r="13.5" fill="url(#preview-${game}-${mark})" stroke="#f0c86c" stroke-width="1.6"/><use href="#petal-flower" transform="translate(${x-10} ${y-10}) scale(.2)" fill="none" stroke="#ffe398"/></g>`:`<circle cx="${x}" cy="${y}" r="5" fill="#4d2e16" stroke="#d8aa61"/>`;});
+        $('#preview-'+game).innerHTML=`<svg viewBox="0 0 300 300" aria-hidden="true"><defs><linearGradient id="preview-${game}-wood" x2="0" y2="1"><stop stop-color="#f6d399"/><stop offset="1" stop-color="#cd8e47"/></linearGradient><radialGradient id="preview-${game}-X" cx=".3" cy=".2" r=".8"><stop stop-color="#ffadb1"/><stop offset=".35" stop-color="#d71935"/><stop offset="1" stop-color="#610619"/></radialGradient><radialGradient id="preview-${game}-O" cx=".3" cy=".2" r=".8"><stop stop-color="#9cdeff"/><stop offset=".35" stop-color="#1e79c1"/><stop offset="1" stop-color="#09294e"/></radialGradient></defs><rect width="300" height="300" fill="url(#preview-${game}-wood)"/><rect x="5" y="5" width="290" height="290" rx="6" fill="none" stroke="#b77a39"/><path d="${lines}" fill="none" stroke="#e9bf7d" stroke-width="5"/><path d="${lines}" fill="none" stroke="#57300f" stroke-width="3"/>${pieces}</svg>`;
+      }
+    }
+    function updateSelection() {
+      for(const game of ['morris','twelve'])$('#select-'+game).setAttribute('aria-pressed',String($('#game').value===game));
+    }
+    function selectGame(game) {
+      if(!['morris','twelve'].includes(game))return;
+      cancelComputer();active=false;$('#game').value=game;
+      $('#selection-screen').hidden=true;$('#game-screen').hidden=true;$('#setup-screen').hidden=false;
+      $('#audio-note').hidden=false;$('#setup-game-title').textContent=titles[game];updateSelection();setupChanged();$('#setup-title').focus();
+    }
+    function backToSelection() {
+      cancelComputer();active=false;selected=null;forced=null;
+      $('#setup-screen').hidden=true;$('#game-screen').hidden=true;$('#selection-screen').hidden=false;
+      $('#audio-note').hidden=true;updateSelection();$('#selection-title').focus();
     }
     function playGame() {
       cancelComputer();config={game:$('#game').value,mode:$('#mode').value,level:$('#difficulty').value,side:$('#side').value};
       applyPalette();savePreferences();active=true;
-      $('#setup-screen').hidden=true;$('#game-screen').hidden=false;
+      $('#audio-note').hidden=false;$('#selection-screen').hidden=true;$('#setup-screen').hidden=true;$('#game-screen').hidden=false;
       $('#game-title').textContent=titles[config.game];document.title=titles[config.game]+' — Woodland Classics';
       $('#game-rules').textContent=config.game==='morris'?
         'Start with three pieces on the top row and three on the bottom row. No placement or captures. Move to a directly connected adjacent empty point. Only the middle row (3,4,5), middle column (1,4,7), and diagonals (0,4,8) and (2,4,6) win. Outer lines never win. A blocked player loses. The same board and turn three times, or 100 moves, draw. Player 1 starts match 1; starters alternate only after completed matches. Restarting an unfinished match does not advance the sequence.':
@@ -467,7 +537,7 @@
     }
     function backToSetup() {
       cancelComputer();active=false;selected=null;forced=null;
-      $('#game-screen').hidden=true;$('#setup-screen').hidden=false;
+      $('#selection-screen').hidden=true;$('#game-screen').hidden=true;$('#setup-screen').hidden=false;
       document.title='Woodland Classics — Traditional Strategy Games';updateStarterHint();render();$('#setup-title').focus();
     }
     let audioContext = null, effectsGain = null, musicGain = null;
@@ -547,13 +617,16 @@
     $('#music-toggle').addEventListener('click', () => setMusic(!musicEnabled));
     $('#setup-sound').addEventListener('change', () => setSound($('#setup-sound').checked));
     $('#setup-music').addEventListener('change', () => setMusic($('#setup-music').checked));
+    $('#select-morris').addEventListener('click',()=>selectGame('morris'));
+    $('#select-twelve').addEventListener('click',()=>selectGame('twelve'));
+    $('#back-selection').addEventListener('click',backToSelection);
     $('#play-game').addEventListener('click',playGame);
     $('#back-setup').addEventListener('click',backToSetup);
     $('#restart').addEventListener('click',restartGame);
     $('#next-match').addEventListener('click',()=>{if(gameOver)restartGame();});
-    for (const id of ['game','mode','difficulty','colors','side']) $('#'+id).addEventListener('change',setupChanged);
-    $('#reset-scores').addEventListener('click',()=>{scores[scoreKey()]={X:0,O:0,draw:0};render();});
-    loadPreferences();buildPaletteChoices();applyPalette();updateAudioControls();
+    for (const id of ['mode','difficulty','colors','side']) $('#'+id).addEventListener('change',setupChanged);
+    $('#reset-scores').addEventListener('click',()=>{scores[scoreKey()]={X:0,O:0,draw:0};saveResults();render();});
+    loadPreferences();loadResults();buildPaletteChoices();buildGamePreviews();updateSelection();applyPalette();updateAudioControls();
     $('#difficulty-field').hidden=$('#mode').value!=='computer';
     $('#difficulty').disabled=$('#mode').value!=='computer';
     drawBoard();restartGame();
