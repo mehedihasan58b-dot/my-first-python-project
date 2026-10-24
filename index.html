@@ -3,116 +3,126 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#171c2c">
+  <meta name="theme-color" content="#392016">
   <title>Tin Guti — Three Men's Morris</title>
   <style>
     * { box-sizing: border-box; }
-    body { margin: 0; min-height: 100svh; background: #101420; color: #f4f3ed; font-family: system-ui, sans-serif; display: grid; place-items: center; padding: 24px 16px; }
-    main { width: min(100%, 420px); }
-    .eyebrow { color: #b3bdcf; text-transform: uppercase; letter-spacing: .22em; font-size: 11px; font-weight: 700; }
-    header { margin-bottom: 28px; }
-    h1 { font-size: clamp(34px, 9vw, 46px); letter-spacing: -.055em; margin: 8px 0; }
-    .intro { color: #a7afc1; margin: 0; font-size: 14px; }
-    .players { display: flex; gap: 12px; margin-bottom: 20px; }
-    .player { flex: 1; padding: 15px; border: 1px solid #343b4e; border-radius: 12px; background: #191f30; display: flex; align-items: center; gap: 12px; }
-    .player.active { border-color: #d5ef90; background: #232c30; }
-    .symbol { font-size: 28px; font-weight: 700; color: #d5ef90; }
-    .player:last-child .symbol { color: #c0b3f5; }
-    .board { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-    .cell { aspect-ratio: 1; min-width: 0; border: 1px solid #30384c; border-radius: 14px; background: #1c2335; color: #d5ef90; font: 600 clamp(42px, 14vw, 66px)/1 system-ui, sans-serif; cursor: pointer; touch-action: manipulation; transition: background .15s, transform .15s; }
-    .cell:not(:disabled):hover { background: #2a3349; transform: translateY(-2px); }
-    .cell:disabled { cursor: default; opacity: 1; }
-    .cell.o { color: #c0b3f5; }
-    button:focus-visible { outline: 3px solid #f5d87b; outline-offset: 4px; }
-    footer { text-align: center; color: #949eb3; font-size: 12px; margin-top: 24px; }
-    @media (prefers-reduced-motion: reduce) { .cell { transition: none; } }
-
-    main { text-align: center; }
-    header { text-align: left; }
-    .game { width: 100%; }
-    .settings { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; text-align: left; }
-    label { display: grid; gap: 8px; font-size: 12px; font-weight: 700; }
-    select { width: 100%; min-width: 0; padding: 12px 8px; border: 1px solid #343b4e; border-radius: 10px; background: #191f30; color: #f4f3ed; font: inherit; font-size: 13px; }
-    select:focus-visible { outline: 3px solid #f5d87b; outline-offset: 3px; }
-    select:disabled { opacity: .6; }
-    .player { justify-content: center; font-size: 13px; padding: 12px 8px; }
-    .cell.x, #player-x .symbol { color: #ff7d88; }
-    .cell.o, #player-o .symbol { color: #79b4ff; }
-    .cell.winner { background: #344333; border-color: #d5ef90; }
-    #status { text-align: center; font-size: 16px; font-weight: 600; margin: 20px 0 18px; min-height: 24px; }
-    #restart { width: 100%; margin-top: 20px; padding: 15px; background: #d5ef90; color: #172016; border: 0; border-radius: 10px; font: 700 14px system-ui, sans-serif; cursor: pointer; touch-action: manipulation; }
-    #restart:hover { background: #e3ffa0; }
-    .scoreboard { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 20px 0 10px; }
-    .scoreboard div { padding: 12px 4px; border: 1px solid #343b4e; border-radius: 12px; background: #191f30; color: #b3bdcf; font-size: 12px; }
-    .scoreboard strong { display: block; margin-top: 5px; color: #f4f3ed; font-size: 24px; }
-    #reset-scores { border: 0; padding: 12px; background: transparent; color: #c0b3f5; cursor: pointer; text-decoration: underline; }
-    .score-note { margin: 0; font-size: 11px; color: #a7afc1; }
-    .instructions { margin-top: 24px; color: #a7afc1; font-size: 13px; line-height: 1.8; }
-    .instructions strong { color: #f4f3ed; }
-    .board-wrap { position: relative; }
-    #connections { display: block; position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
-    .board { gap: 0; padding: 0; }
-    .cell { position: relative; z-index: 1; border: 0; border-radius: 50%; background: transparent; font-size: clamp(30px, 11vw, 48px); }
-    .cell::before { content: ''; position: absolute; inset: 20%; background: #1c2335; border: 2px solid #53617a; border-radius: 50%; z-index: -1; }
-    .cell:not(:disabled):hover { background: transparent; transform: none; }
-    .cell.selected::before { border: 4px solid #f5d87b; background: #343c36; }
-    .cell.target::before { border-color: #d5ef90; background: #293c35; }
-    .cell.winner::before { background: #344333; border-color: #d5ef90; }
-    #phase { color: #b3bdcf; font-size: 13px; min-height: 20px; }
-    .cell.x::before { background: #692d3d; border-color: #ff7d88; }
-    .cell.o::before { background: #244c7b; border-color: #79b4ff; }
-    .cell.selected::before { outline: 3px solid #f5d87b; outline-offset: 3px; }
-    .cell.winner::before { box-shadow: 0 0 0 4px #d5ef90; }
-    .audio-controls { display: flex; gap: 10px; margin: 16px 0 8px; }
-    .audio-controls button { flex: 1; min-height: 44px; border: 1px solid #53617a; border-radius: 10px; background: #191f30; color: #f4f3ed; font: 600 13px system-ui, sans-serif; cursor: pointer; touch-action: manipulation; }
-    .audio-controls button[aria-pressed="true"] { border-color: #d5ef90; color: #d5ef90; }
-    #audio-note { margin: 0 0 18px; color: #a7afc1; font-size: 11px; }
+    :root { color-scheme: dark; --top: #ba102c; --top-light: #ff5162; --top-dark: #510614; --bottom: #007f8b; --bottom-light: #49d9dd; --bottom-dark: #003a43; --gold: #e8bc68; }
+    [hidden] { display: none !important; }
+    body { margin: 0; min-height: 100svh; padding: 24px 16px 36px; color: #fae6b9; background: radial-gradient(ellipse at 5% 0%, #34411b88, transparent 35%), radial-gradient(ellipse at 100% 90%, #26371599, transparent 28%), repeating-linear-gradient(3deg, #ffffff03 0 1px, #00000014 2px 4px, transparent 5px 11px), repeating-linear-gradient(94deg, #29150f 0, #402317 3%, #24120c 9%, #4d2b1b 16%, #29150f 24%); font-family: Georgia, 'Noto Serif Bengali', serif; }
+    main { max-width: 940px; margin: auto; }
+    button, select { font: inherit; }
+    button { cursor: pointer; touch-action: manipulation; }
+    button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px solid #fff5a9; outline-offset: 5px; }
+    button:disabled { cursor: default; opacity: 1; }
+    .eyebrow { text-transform: uppercase; letter-spacing: .22em; font: 700 10px system-ui, sans-serif; color: #d3af74; }
+    h1, h2, p { margin-top: 0; }
+    .brand { text-align: center; }
+    .brand h1 { font-size: clamp(44px, 9vw, 76px); line-height: 1.3; margin: 5px 0; color: #ffe09a; text-shadow: 0 3px 0 #743b16, 0 6px 10px #000; }
+    .brand p { color: #d4b992; font-size: 14px; }
+    .wood-panel { border: 2px solid #ac7139; border-radius: 24px; background: repeating-linear-gradient(2deg, #ffffff04 0 2px, transparent 3px 8px), linear-gradient(110deg,#26130c,#583019 50%,#25100a); box-shadow: inset 0 0 0 4px #1d0d08, inset 0 0 0 6px #87512c, 0 16px 35px #0008; }
+    #setup-screen { max-width: 650px; margin: 24px auto; padding: clamp(22px, 5vw, 42px); }
+    .setup-heading { text-align: center; margin-bottom: 28px; }
+    .setup-heading h2 { color: #ffe0a0; font-size: 25px; margin-bottom: 8px; }
+    .setup-heading p { color: #cfb38a; font: 13px/1.6 system-ui, sans-serif; }
+    .settings { display: grid; grid-template-columns: 1fr 1fr; gap: 22px 16px; }
+    label { display: grid; gap: 9px; color: #f6dcac; font: 600 13px system-ui, sans-serif; }
+    select { width: 100%; min-width: 0; min-height: 48px; padding: 12px 9px; border: 1px solid #b17d43; border-radius: 10px; background: #24160f; color: #fff0d1; font: 13px system-ui, sans-serif; }
+    select:disabled { opacity: .5; }
+    .setup-audio { display: flex; flex-wrap: wrap; gap: 22px; margin: 26px 0; }
+    .setup-audio label { display: flex; align-items: center; min-height: 44px; gap: 10px; }
+    input { accent-color: #d2a451; width: 20px; height: 20px; }
+    .palette-preview { display: flex; justify-content: center; gap: 16px; margin: 24px 0; }
+    .palette-preview .token { width: 58px; height: 58px; }
+    .gold-button, .secondary-button { border: 1px solid #f4cd7c; border-radius: 12px; padding: 13px 20px; min-height: 48px; color: #fff3d6; font: 700 14px system-ui, sans-serif; background: linear-gradient(#ba7c24,#764006); box-shadow: inset 0 1px 2px #fff7, 0 4px 0 #301809, 0 7px 15px #0005; }
+    .gold-button:hover { filter: brightness(1.13); }
+    #play-game { width: 100%; font-size: 17px; }
+    .secondary-button { background: linear-gradient(#4c392a,#221b16); border-color: #b39b72; }
+    .game-top { display: grid; grid-template-columns: 1fr 1.25fr 1fr; align-items: center; gap: 16px; margin-bottom: 18px; }
+    .game-top .brand { padding: 10px 8px; }
+    .game-top .brand h1 { font-size: clamp(32px, 6vw, 62px); white-space: nowrap; }
+    .score-card { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 14px 10px; border: 2px solid #b98242; border-radius: 18px; background: linear-gradient(130deg,#41120d,#190d0a); box-shadow: inset 0 0 0 2px #000,0 5px 10px #0006; min-width: 0; text-align: center; }
+    #player-o { background: linear-gradient(130deg,#082e30,#0a1417); }
+    .score-card.active { border-color: #ffe3a0; box-shadow: 0 0 18px #c8913b55,inset 0 0 0 2px #000; }
+    .score-card .token { flex-shrink: 0; width: clamp(34px,6vw,66px); height: clamp(34px,6vw,66px); }
+    .player-name { display: block; font: 600 clamp(10px,1.8vw,16px)/1.3 system-ui,sans-serif; color: #f6ead4; }
+    .score-card strong { display: block; margin-top: 5px; font: 500 clamp(24px,4vw,36px) system-ui,sans-serif; color: white; }
+    .toolbar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 14px; }
+    .audio-controls { display: flex; gap: 8px; }
+    .audio-controls button { border: 1px solid #a9834a; border-radius: 10px; background: linear-gradient(#19492b,#092718); min-height: 44px; padding: 10px 14px; color: #fff4db; font: 600 12px system-ui,sans-serif; }
+    .audio-controls button[aria-pressed="false"] { background: linear-gradient(#463b30,#241e18); color: #c6b69b; }
+    .draw-badge { color: #ecd5ae; font: 13px system-ui,sans-serif; }
+    #status { text-align: center; color: #ffe2a1; font: 600 clamp(13px,2vw,16px)/1.5 system-ui,sans-serif; margin: 14px 0 5px; min-height: 24px; }
+    #phase { text-align: center; font: 11px system-ui,sans-serif; color: #c4a786; margin-bottom: 18px; }
+    .board-frame { width: min(100%, 780px); margin: auto; padding: clamp(13px,3vw,26px); border: 2px solid #d19c66; border-radius: clamp(20px,4vw,38px); background: repeating-linear-gradient(5deg,#ffffff08 0 1px,transparent 2px 7px), linear-gradient(125deg,#9b563a,#452014 23%,#9b5435 50%,#38160e 80%,#9b563a); box-shadow: inset 0 0 0 5px #4a2116,inset 0 0 0 8px #b7774f,0 10px 0 #281007,0 18px 35px #0009; }
+    .board-wrap { position: relative; aspect-ratio: 1; border: 3px solid #42200d; border-radius: 12px; overflow: hidden; background: #e6ad63; box-shadow: inset 0 0 0 3px #ffdc98,inset 0 0 25px #8e4c1980; }
+    #connections { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+    .board { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(3,1fr); grid-template-rows: repeat(3,1fr); }
+    .cell { position: relative; border: 0; border-radius: 50%; background: transparent; min-width: 0; padding: 0; display: grid; place-items: center; -webkit-tap-highlight-color: transparent; }
+    .cell::before { content: ''; position: absolute; width: 28%; aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle,#482a1c,#241309); border: 2px solid #f4c87e; box-shadow: 0 0 0 2px #61360f,0 2px 4px #0009; }
+    .token { --piece: var(--top); --light: var(--top-light); --dark: var(--top-dark); position: relative; display: grid; place-items: center; aspect-ratio: 1; border-radius: 50%; border: 3px solid #ebbb5b; background: radial-gradient(ellipse at 27% 18%,#fff9 0 3%,transparent 17%),radial-gradient(circle at 36% 30%,var(--light),var(--piece) 42%,var(--dark) 74%); box-shadow: inset 0 0 0 2px #632e05,inset 0 0 0 5px #f4cd6b99,inset -3px -5px 6px #000a,0 4px 0 #6e3b0c,0 7px 7px #0009; }
+    .token.o { --piece: var(--bottom); --light: var(--bottom-light); --dark: var(--bottom-dark); }
+    .cell .token { width: 65%; z-index: 1; transition: transform .18s; }
+    .flower { width: 77%; height: 77%; color: #f3cc66; filter: drop-shadow(0 1px 1px #482007); }
+    .cell.selected .token { outline: 3px solid #fff6b4; outline-offset: 5px; transform: translateY(-4px); }
+    .cell.target::before { background: radial-gradient(circle,#e8eb9b,#8a9c40); box-shadow: 0 0 0 5px #ffed8a88,0 0 20px #fff9; }
+    .cell.winner .token { outline: 4px solid #fff5a4; outline-offset: 3px; box-shadow: 0 0 25px #ffe685; }
+    .game-actions { display: flex; justify-content: center; flex-wrap: wrap; gap: 14px; margin-top: 28px; }
+    .score-note, #audio-note { text-align: center; color: #bc9d76; font: 11px/1.6 system-ui,sans-serif; margin: 18px 0 10px; }
+    #reset-scores { display: block; margin: 0 auto; background: transparent; color: #d0af7b; border: 0; min-height: 44px; text-decoration: underline; font: 12px system-ui,sans-serif; }
+    details { margin: 18px auto; max-width: 700px; font: 12px/1.8 system-ui,sans-serif; color: #d2b68b; }
+    summary { cursor: pointer; text-align: center; padding: 10px; }
+    footer { text-align: center; color: #a88a63; font-size: 11px; margin-top: 30px; }
+    .svg-library { position: absolute; width: 0; height: 0; overflow: hidden; }
+    @media(max-width: 560px) { body { padding: 16px 12px 28px; } .game-top { gap: 6px; grid-template-columns: 1fr 1fr 1fr; } .score-card { flex-direction: column; gap: 7px; padding: 10px 4px; border-radius: 14px; } .score-card .token { width: 38px; height: 38px; } .score-card strong { margin-top: 2px; font-size: 23px; } .game-top .brand h1 { font-size: clamp(24px,7vw,36px); } .game-top .brand .eyebrow { font-size: 8px; letter-spacing: .08em; } .board-frame { padding: 12px; } .cell .token { border-width: 2px; } .toolbar { justify-content: center; } .settings { gap: 18px 12px; } }
+    @media(prefers-reduced-motion: reduce) { * { transition: none !important; } }
   </style>
 </head>
 <body>
+  <svg class="svg-library" aria-hidden="true"><defs><g id="petal-flower" fill="none" stroke="currentColor" stroke-width="1.7"><g id="petals"><path d="M50 44 Q35 29 50 12 Q65 29 50 44Z"/><path d="M50 44 Q35 29 50 12 Q65 29 50 44Z" transform="rotate(45 50 50)"/><path d="M50 44 Q35 29 50 12 Q65 29 50 44Z" transform="rotate(90 50 50)"/><path d="M50 44 Q35 29 50 12 Q65 29 50 44Z" transform="rotate(135 50 50)"/><path d="M50 44 Q35 29 50 12 Q65 29 50 44Z" transform="rotate(180 50 50)"/><path d="M50 44 Q35 29 50 12 Q65 29 50 44Z" transform="rotate(225 50 50)"/><path d="M50 44 Q35 29 50 12 Q65 29 50 44Z" transform="rotate(270 50 50)"/><path d="M50 44 Q35 29 50 12 Q65 29 50 44Z" transform="rotate(315 50 50)"/></g><circle cx="50" cy="50" r="7"/><circle cx="50" cy="50" r="29" stroke-opacity=".3"/></g></defs></svg>
   <main>
-    <header><span class="eyebrow">A little friendly competition</span><h1>Tin Guti<span style="color:#d5ef90">.</span></h1><p class="intro">Three Men's Morris · Six pieces. Slide to win.</p></header>
-    <section class="game" aria-label="Tin Guti game">
+    <section id="setup-screen" class="wood-panel" aria-labelledby="setup-title">
+      <header class="brand"><span class="eyebrow">A timeless little rivalry</span><h1 lang="bn">তিন গুটি</h1><p>Tin Guti · Three Men's Morris</p></header>
+      <div class="setup-heading"><h2 id="setup-title" tabindex="-1">Game Setup</h2><p>Choose your opponent, pick your pieces, and take a seat.</p></div>
       <div class="settings">
         <label>Game mode<select id="mode"><option value="pvp">Player vs Player</option><option value="computer">Player vs Computer</option></select></label>
         <label>Computer difficulty<select id="difficulty" disabled><option value="easy">Easy</option><option value="medium">Medium</option><option value="hard">Hard</option></select></label>
+        <label>Piece color set<select id="colors"><option value="ruby">Ruby &amp; Teal</option><option value="sapphire">Sapphire &amp; Amber</option><option value="emerald">Emerald &amp; Amethyst</option><option value="pearl">Ivory &amp; Onyx</option></select></label>
+        <label>Your side (Player 1)<select id="side"><option value="X">Top · moves first</option><option value="O">Bottom · moves second</option></select></label>
       </div>
-      <div class="audio-controls" aria-label="Audio settings">
-        <button id="sound-toggle" aria-pressed="true">Sound ON</button>
-        <button id="music-toggle" aria-pressed="false">Music OFF</button>
-      </div>
-      <p id="audio-note">Audio starts after your first tap. Music is optional.</p>
-      <div class="players">
-        <div id="player-x" class="player active"><span class="symbol x">X</span> Red · Player one</div>
-        <div id="player-o" class="player"><span class="symbol o">O</span> <span id="o-name">Blue · Player two</span></div>
-      </div>
-      <p id="status" role="status" aria-live="polite" aria-atomic="true">Red (X)'s turn — select your piece</p>
-      <p id="phase"></p>
-      <div class="board-wrap" id="board-wrap">
-      <svg id="connections" viewBox="0 0 300 300" aria-hidden="true"><g stroke="#53617a" stroke-width="3" fill="none"><path d="M50 50H250 M50 150H250 M50 250H250 M50 50V250 M150 50V250 M250 50V250 M50 50L250 250 M250 50L50 250"/></g></svg>
-      <div class="board" role="group" aria-label="Game board, three rows and three columns">
-        <button class="cell" aria-label="Row 1, column 1, empty"></button>
-        <button class="cell" aria-label="Row 1, column 2, empty"></button>
-        <button class="cell" aria-label="Row 1, column 3, empty"></button>
-        <button class="cell" aria-label="Row 2, column 1, empty"></button>
-        <button class="cell" aria-label="Row 2, column 2, empty"></button>
-        <button class="cell" aria-label="Row 2, column 3, empty"></button>
-        <button class="cell" aria-label="Row 3, column 1, empty"></button>
-        <button class="cell" aria-label="Row 3, column 2, empty"></button>
-        <button class="cell" aria-label="Row 3, column 3, empty"></button>
-      </div>
-      </div>
-      <button id="restart">↻ &nbsp; Restart game</button>
-      <div class="scoreboard" role="group" aria-label="Scoreboard">
-        <div>Red wins<strong id="score-x">0</strong></div>
-        <div>Draws<strong id="score-draw">0</strong></div>
-        <div>Blue wins<strong id="score-o">0</strong></div>
-      </div>
-      <p class="score-note">Scores for this mode and difficulty · this page session</p>
-      <button id="reset-scores">Reset scores</button>
+      <div class="palette-preview" aria-hidden="true"><span class="token x"><svg class="flower" viewBox="0 0 100 100" aria-hidden="true"><use href="#petal-flower"/></svg></span><span class="token o"><svg class="flower" viewBox="0 0 100 100" aria-hidden="true"><use href="#petal-flower"/></svg></span></div>
+      <div class="setup-audio"><label><input id="setup-sound" type="checkbox" checked>Sound effects</label><label><input id="setup-music" type="checkbox">Background music</label></div>
+      <p class="score-note">Top always moves first. In computer mode, choose Bottom to let the computer open.</p>
+      <button id="play-game" class="gold-button">Play Game →</button>
     </section>
-    <p class="instructions"><strong>Win through the center.</strong><br>Red (X) starts across the top row; Blue (O) starts across the bottom row. The middle row is empty. These starting rows are not wins. Red starts. Select your piece and tap a highlighted adjacent empty point on a connecting line. No jumping. Only the middle row (3,4,5), middle column (1,4,7), and diagonals (0,4,8) and (2,4,6) win (indices run 0–8, left to right, top to bottom). The four outer rows/columns never win, but their connections still allow adjacent movement. A blocked player loses. Three repetitions of the same board and turn, or 100 movement turns, draw. In computer mode you play Red (X). Changing settings starts a new round.</p>
-    <footer>No sign-ups. Just good company.</footer>
+    <section id="game-screen" hidden aria-label="Tin Guti gameplay">
+      <header class="game-top">
+        <div id="player-x" class="score-card"><span class="token x" aria-hidden="true"><svg class="flower" viewBox="0 0 100 100" aria-hidden="true"><use href="#petal-flower"/></svg></span><div><span id="x-name" class="player-name">Player 1</span><strong id="score-x">0</strong></div></div>
+        <div class="brand wood-panel"><span class="eyebrow">Tin Guti</span><h1 lang="bn">তিন গুটি</h1></div>
+        <div id="player-o" class="score-card"><span class="token o" aria-hidden="true"><svg class="flower" viewBox="0 0 100 100" aria-hidden="true"><use href="#petal-flower"/></svg></span><div><span id="o-name" class="player-name">Player 2</span><strong id="score-o">0</strong></div></div>
+      </header>
+      <div class="toolbar"><span class="draw-badge">Draws · <strong id="score-draw">0</strong></span><div class="audio-controls" aria-label="Audio settings"><button id="sound-toggle" aria-pressed="true">♫ Sound ON</button><button id="music-toggle" aria-pressed="false">♪ Music OFF</button></div></div>
+      <div class="board-frame"><div class="board-wrap">
+        <svg id="connections" viewBox="0 0 300 300" aria-hidden="true"><defs><filter id="grain"><feTurbulence type="fractalNoise" baseFrequency=".035 .55" numOctaves="3" seed="8"/><feColorMatrix type="saturate" values="0"/><feBlend in="SourceGraphic" mode="soft-light"/></filter><linearGradient id="wood" x2="0" y2="1"><stop stop-color="#f5ce8d"/><stop offset=".48" stop-color="#e5a85f"/><stop offset="1" stop-color="#f1c17c"/></linearGradient></defs><rect width="300" height="300" fill="url(#wood)"/><rect width="300" height="300" fill="#b97d3b" filter="url(#grain)" opacity=".23"/><rect x="5" y="5" width="290" height="290" rx="8" stroke="#bd813e" fill="none"/><g stroke="#e8b666" stroke-width="6" fill="none"><path id="board-lines" d="M50 50H250 M50 150H250 M50 250H250 M50 50V250 M150 50V250 M250 50V250 M50 50L250 250 M250 50L50 250"/></g><use href="#board-lines" stroke="#47230e" stroke-width="4" fill="none"/></svg>
+        <div class="board" role="group" aria-label="Tin Guti board, three rows and three columns">
+          <button class="cell" aria-label="Row 1, column 1"></button>
+          <button class="cell" aria-label="Row 1, column 2"></button>
+          <button class="cell" aria-label="Row 1, column 3"></button>
+          <button class="cell" aria-label="Row 2, column 1"></button>
+          <button class="cell" aria-label="Row 2, column 2"></button>
+          <button class="cell" aria-label="Row 2, column 3"></button>
+          <button class="cell" aria-label="Row 3, column 1"></button>
+          <button class="cell" aria-label="Row 3, column 2"></button>
+          <button class="cell" aria-label="Row 3, column 3"></button>
+        </div>
+      </div></div>
+      <p id="status" role="status" aria-live="polite" aria-atomic="true"></p><p id="phase"></p>
+      <div class="game-actions"><button id="back-setup" class="secondary-button">← Back to Setup</button><button id="restart" class="gold-button">↻ Restart</button></div>
+      <p class="score-note">Session scores for this mode, difficulty and side</p><button id="reset-scores">Reset scores</button>
+      <details><summary>How to play · Custom rules</summary><p>Top starts with three pieces, bottom with three; the middle row is empty. Select your piece, then a highlighted adjacent empty point connected by a line. No jumping. Only the middle row (3,4,5), middle column (1,4,7) and diagonals (0,4,8), (2,4,6) win. Outer rows and columns never win. A blocked player loses. Three repetitions of the same board and turn, or 100 moves, draw. Restart restores the six original pieces. Back to Setup ends the round without changing scores.</p></details>
+    </section>
+    <p id="audio-note">Audio starts after your first tap. Music is optional.</p>
+    <footer>Made for a little friendly competition.</footer>
   </main>
   <script>
     // Tin Guti rules are shared by the interface and computer search.
@@ -132,7 +142,28 @@
     });
     // Starting outer rows never count as wins under these custom rules.
     const STARTING_BOARD = Object.freeze(['X','X','X','','','','O','O','O']);
-    const playerName = mark => mark === 'X' ? 'Red (X)' : 'Blue (O)';
+    const palettes = {
+      ruby: { names: ['Ruby', 'Teal'], values: ['#ba102c','#ff5162','#510614','#007f8b','#49d9dd','#003a43'] },
+      sapphire: { names: ['Sapphire', 'Amber'], values: ['#154aaa','#70afff','#061e53','#c57a0c','#ffdb6e','#6d3506'] },
+      emerald: { names: ['Emerald', 'Amethyst'], values: ['#117846','#60d597','#033e26','#782fa2','#d58aef','#341044'] },
+      pearl: { names: ['Ivory', 'Onyx'], values: ['#dfd0a8','#fff9df','#89754e','#383b43','#8a8d97','#101117'] }
+    };
+    let active = false, humanSide = 'X', currentPalette = 'ruby';
+    const playerName = mark => `${palettes[currentPalette].names[mark === 'X' ? 0 : 1]} (${mark === 'X' ? 'Top' : 'Bottom'})`;
+    const computerSide = () => humanSide === 'X' ? 'O' : 'X';
+    const isComputerTurn = () => mode.value === 'computer' && currentPlayer === computerSide();
+    const tokenArtwork = '<svg class="flower" viewBox="0 0 100 100" aria-hidden="true"><use href="#petal-flower"/></svg>';
+    function applyPalette() {
+      currentPalette = $('#colors').value;
+      const values = palettes[currentPalette].values;
+      ['--top','--top-light','--top-dark','--bottom','--bottom-light','--bottom-dark'].forEach((name, i) => document.documentElement.style.setProperty(name, values[i]));
+    }
+    function updatePlayerNames() {
+      for (const mark of ['X','O']) {
+        const owner = mode.value === 'computer' ? (mark === humanSide ? 'You' : 'Computer') : (mark === humanSide ? 'Player 1' : 'Player 2');
+        $(mark === 'X' ? '#x-name' : '#o-name').textContent = `${owner} · ${palettes[currentPalette].names[mark === 'X' ? 0 : 1]}`;
+      }
+    }
     let board, currentPlayer, gameOver;
     let selected = null, computerTimer = null, movementTurns = 0, history = new Map();
     const scores = {};
@@ -152,7 +183,7 @@
       next[move.to] = turn;
       return next;
     }
-    function scoreKey() { return `${mode.value}:${mode.value === 'computer' ? difficulty.value : ''}`; }
+    function scoreKey() { return `${mode.value}:${mode.value === 'computer' ? difficulty.value : ''}:${humanSide}`; }
     function currentScores() { return scores[scoreKey()] ||= { X: 0, O: 0, draw: 0 }; }
     function updateScores() {
       const score = currentScores();
@@ -172,22 +203,22 @@
       return null;
     }
     function render() {
-      const computerTurn = mode.value === 'computer' && currentPlayer === 'O';
+      const computerTurn = isComputerTurn();
       const line = winnerLine(board);
       const targets = selected === null ? [] : legalMoves(board, currentPlayer).filter(m => m.from === selected).map(m => m.to);
       cells.forEach((cell, index) => {
-        cell.textContent = board[index];
+        cell.innerHTML = board[index] ? `<span class="token ${board[index].toLowerCase()}" aria-hidden="true">${tokenArtwork}</span>` : '';
         cell.className = 'cell' + (board[index] ? ' ' + board[index].toLowerCase() : '');
         if (line?.includes(index)) cell.classList.add('winner');
         if (selected === index) cell.classList.add('selected');
         if (targets.includes(index)) cell.classList.add('target');
-        cell.disabled = gameOver || computerTurn || !(board[index] === currentPlayer || targets.includes(index));
+        cell.disabled = !active || gameOver || computerTurn || !(board[index] === currentPlayer || targets.includes(index));
         cell.setAttribute('aria-label', `Row ${Math.floor(index/3)+1}, column ${index%3+1}, ${board[index] ? playerName(board[index]) : 'empty'}${selected === index ? ', selected' : ''}${targets.includes(index) ? ', legal destination' : ''}`);
         cell.setAttribute('aria-pressed', String(selected === index));
       });
       $('#player-x').classList.toggle('active', !gameOver && currentPlayer === 'X');
       $('#player-o').classList.toggle('active', !gameOver && currentPlayer === 'O');
-      if (!gameOver) status.textContent = computerTurn ? 'Computer — Blue (O) is thinking…' :
+      if (!gameOver) status.textContent = computerTurn ? `Computer — ${playerName(currentPlayer)} is thinking…` :
         `${playerName(currentPlayer)}'s turn — ${selected === null ? 'select your piece' : 'tap a highlighted destination'}`;
       $('#phase').textContent = `Move ${movementTurns}/100 · adjacent moves only`;
       updateScores();
@@ -219,29 +250,29 @@
       }
       return best;
     }
-    function chooseComputerMove(state, level, seen = history, steps = movementTurns) {
-      const moves = legalMoves(state, 'O');
+    function chooseComputerMove(state, level, seen = history, steps = movementTurns, aiMark = computerSide()) {
+      const moves = legalMoves(state, aiMark);
       if (!moves.length) return null;
       if (level === 'easy') return moves[Math.floor(Math.random() * moves.length)];
-      let best = -Infinity, choice = moves[0];
+      let best = aiMark === 'O' ? -Infinity : Infinity, choice = moves[0];
       const depth = level === 'hard' ? 8 : 2;
       for (const move of moves) {
-        const next = applyMove(state, move, 'O'), nextSeen = new Map(seen), key = stateKey(next, 'X');
+        const next = applyMove(state, move, aiMark), nextSeen = new Map(seen), key = stateKey(next, other(aiMark));
         nextSeen.set(key, (nextSeen.get(key) || 0) + 1);
-        const value = search(next, 'X', depth - 1, nextSeen, steps + 1);
-        if (value > best) { best = value; choice = move; }
+        const value = search(next, other(aiMark), depth - 1, nextSeen, steps + 1);
+        if (aiMark === 'O' ? value > best : value < best) { best = value; choice = move; }
       }
       return choice;
     }
     function finish(result) {
       gameOver = true;
-      playSound(result.winner === 'draw' ? 'draw' : mode.value === 'computer' && result.winner === 'O' ? 'lose' : 'win');
+      playSound(result.winner === 'draw' ? 'draw' : mode.value === 'computer' && result.winner === computerSide() ? 'lose' : 'win');
       currentScores()[result.winner]++;
       status.textContent = result.winner === 'draw' ? `Draw! ${result.reason}` : `${playerName(result.winner)} wins! ${result.reason}`;
     }
     function commitMove(move, fromComputer = false) {
-      const computerTurn = mode.value === 'computer' && currentPlayer === 'O';
-      if (gameOver || computerTurn !== fromComputer || !move) return;
+      const computerTurn = isComputerTurn();
+      if (!active || gameOver || computerTurn !== fromComputer || !move) return;
       if (!legalMoves(board, currentPlayer).some(m => m.from === move.from && m.to === move.to)) return;
       movementTurns++;
       board = applyMove(board, move, currentPlayer);
@@ -253,15 +284,17 @@
       if (result) finish(result);
       else playSound('move');
       render();
-      if (!gameOver && mode.value === 'computer' && currentPlayer === 'O') {
-        computerTimer = setTimeout(() => {
-          computerTimer = null;
-          commitMove(chooseComputerMove(board, difficulty.value), true);
-        }, 250);
-      }
+      scheduleComputer();
+    }
+    function scheduleComputer() {
+      if (!active || gameOver || !isComputerTurn() || computerTimer !== null) return;
+      computerTimer = setTimeout(() => {
+        computerTimer = null;
+        if (active && !gameOver && isComputerTurn()) commitMove(chooseComputerMove(board, difficulty.value), true);
+      }, 250);
     }
     function makeMove(index) {
-      if (gameOver || (mode.value === 'computer' && currentPlayer === 'O')) return;
+      if (!active || gameOver || isComputerTurn()) return;
       if (board[index] === currentPlayer) {
         selected = selected === index ? null : index;
         render();
@@ -274,8 +307,9 @@
       selected = null; movementTurns = 0;
       history = new Map([[stateKey(board, currentPlayer), 1]]);
       difficulty.disabled = mode.value === 'pvp';
-      $('#o-name').textContent = mode.value === 'computer' ? 'Blue · Computer' : 'Blue · Player two';
+      updatePlayerNames();
       render();
+      scheduleComputer();
     }
     let audioContext = null, effectsGain = null, musicGain = null;
     let soundEnabled = true, musicEnabled = false, musicTimer = null, musicStep = 0;
@@ -338,27 +372,46 @@
       }
     });
     document.addEventListener('visibilitychange', syncMusic);
-    $('#sound-toggle').addEventListener('click', async () => {
-      soundEnabled = !soundEnabled;
-      $('#sound-toggle').textContent = soundEnabled ? 'Sound ON' : 'Sound OFF';
+    function updateAudioControls() {
+      $('#sound-toggle').textContent = soundEnabled ? '♫ Sound ON' : '♫ Sound OFF';
+      $('#music-toggle').textContent = musicEnabled ? '♪ Music ON' : '♪ Music OFF';
       $('#sound-toggle').setAttribute('aria-pressed', String(soundEnabled));
-      if (effectsGain) effectsGain.gain.setValueAtTime(soundEnabled ? 0.18 : 0, audioContext.currentTime);
-      await unlockAudio();
-    });
-    $('#music-toggle').addEventListener('click', async () => {
-      musicEnabled = !musicEnabled;
-      $('#music-toggle').textContent = musicEnabled ? 'Music ON' : 'Music OFF';
       $('#music-toggle').setAttribute('aria-pressed', String(musicEnabled));
+      $('#setup-sound').checked = soundEnabled;
+      $('#setup-music').checked = musicEnabled;
+      if (effectsGain) effectsGain.gain.setValueAtTime(soundEnabled ? 0.18 : 0, audioContext.currentTime);
       syncMusic();
-      await unlockAudio();
-    });
+    }
+    async function setSound(enabled) { soundEnabled = enabled; updateAudioControls(); await unlockAudio(); }
+    async function setMusic(enabled) { musicEnabled = enabled; updateAudioControls(); await unlockAudio(); }
+    $('#sound-toggle').addEventListener('click', () => setSound(!soundEnabled));
+    $('#music-toggle').addEventListener('click', () => setMusic(!musicEnabled));
+    $('#setup-sound').addEventListener('change', () => setSound($('#setup-sound').checked));
+    $('#setup-music').addEventListener('change', () => setMusic($('#setup-music').checked));
+    function playGame() {
+      cancelComputer();
+      humanSide = $('#side').value;
+      applyPalette(); active = true;
+      $('#setup-screen').hidden = true; $('#game-screen').hidden = false;
+      restartGame(); $('#back-setup').focus();
+      void unlockAudio();
+    }
+    function backToSetup() {
+      cancelComputer(); active = false; selected = null;
+      $('#game-screen').hidden = true; $('#setup-screen').hidden = false;
+      render(); $('#setup-title').focus();
+    }
+    $('#play-game').addEventListener('click', playGame);
+    $('#back-setup').addEventListener('click', backToSetup);
+    $('#colors').addEventListener('change', applyPalette);
     cells.forEach((cell, i) => cell.addEventListener('click', () => makeMove(i)));
     $('#restart').addEventListener('click', restartGame);
-    mode.addEventListener('change', restartGame);
-    difficulty.addEventListener('change', restartGame);
+    mode.addEventListener('change', () => { difficulty.disabled = mode.value === 'pvp'; });
     $('#reset-scores').addEventListener('click', () => {
       scores[scoreKey()] = { X: 0, O: 0, draw: 0 }; updateScores();
     });
+    applyPalette();
+    updateAudioControls();
     restartGame();
   </script>
 </body>
