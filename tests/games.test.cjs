@@ -104,7 +104,7 @@ test('Full matches at every difficulty, both games and both computer sides remai
 });
 
 // Small DOM/audio/worker fakes exercise the actual inline application, not a copy.
-function browserHarness({preferences=null,results=null,storageBlocked=false,worker=false,audio=true,autoplay='allowed',keepAudioClock=false,sessionPlayed=false}={}) {
+function browserHarness({preferences=null,results=null,storageBlocked=false,worker=false,audio=true,autoplay='allowed',keepAudioClock=false,sessionPlayed=false,nativeDialog=false}={}) {
   const timers=new Map(),intervals=new Map(),elements={},documentEvents={},windowEvents={},workerEvents=[],urls=new Map(),notes=[],oscillators=[],automations=[],audioContexts=[];let interacted=false;
   let serial=0,contexts=0;const stored={};
   if(preferences)stored['woodland-classics-preferences-v1']=JSON.stringify(preferences);
@@ -112,12 +112,13 @@ function browserHarness({preferences=null,results=null,storageBlocked=false,work
   function element() {
     const classes=new Set();let content='';
     return {value:'',checked:false,hidden:false,disabled:false,children:[],dataset:{},events:{},attributes:{},style:{values:{},setProperty(k,v){this.values[k]=v}},
-      className:'',textContent:'',focus(){},append(child){this.children.push(child)},setAttribute(k,v){this.attributes[k]=v},
+      className:'',textContent:'',focus(){document.activeElement=this;},getAttribute(k){return this.attributes[k]??null},removeAttribute(k){delete this.attributes[k];},append(child){this.children.push(child)},setAttribute(k,v){this.attributes[k]=v},
       addEventListener(k,fn){this.events[k]=fn},
       get innerHTML(){return content},set innerHTML(value){content=value;this.children=[];},
       classList:{add(c){classes.add(c)},toggle(c,on){on?classes.add(c):classes.delete(c)},contains:c=>classes.has(c)}};
   }
   const get=s=>elements[s] ||= element();
+  if(nativeDialog){const dialog=get('#settings-dialog');dialog.showModal=function(){this.open=true;this.attributes.open='';};dialog.close=function(){this.open=false;delete this.attributes.open;this.events.close?.();};}
   const document={hidden:false,title:'',documentElement:element(),querySelector:get,createElement:element,
     querySelectorAll:s=>s==='.palette-choice'?get('#palette-options').children:[],addEventListener(k,fn){(documentEvents[k] ||= []).push(fn)}};
   for(const [id,value] of [['game','morris'],['mode','pvp'],['difficulty','easy'],['colors','redblue'],['side','X']])get('#'+id).value=value;
@@ -296,18 +297,19 @@ test('Both games share a 9%-of-board visible piece scale while full cells remain
   assert(html.includes('@keyframes captured-piece'));assert(html.includes('animation: none !important'));
 });
 
-test('Selection stays in two bounded columns at 320/375/430px; desktop remains centered',()=>{
+test('Mobile cards stack as horizontal panels at 320/375/430px; desktop remains centered',()=>{
   const css=html.match(/<style>([\s\S]*?)<\/style>/)[1];
   const mobile=css.match(/@media\(max-width: 640px\) \{([\s\S]*?)\n    \}/)[1];
-  assert(mobile.includes('grid-template-columns: repeat(2,minmax(0,1fr))'));
-  assert(!mobile.includes('grid-template-columns: 1fr;'));
+  assert(mobile.includes('grid-template-columns: minmax(0,1fr)'));
+  assert(mobile.includes('grid-template-columns: minmax(0,.95fr) minmax(0,1.2fr)'));
+  assert(mobile.includes('grid-column: 1; grid-row: 1 / 5'));
+  assert(mobile.includes('grid-column: 2; min-width: 0'));
   for(const width of [320,375,430]){
-    const available=width-24,gap=Math.min(16,Math.max(8,width*.025)),card=(available-gap)/2;
-    const padding=Math.min(14,Math.max(7,width*.02)),inside=card-4-2*padding;
-    assert(card*2+gap<=available+.001);assert(inside>=120);assert(mobile.includes('min-width: 0'));assert(mobile.includes('width: 100%'));
+    const available=width-24,padding=Math.min(23,Math.max(15,width*.04)),gap=Math.min(22,Math.max(12,width*.035));
+    const content=available-4-2*padding-gap,left=content*.95/2.15,right=content*1.2/2.15;
+    assert(left>=100);assert(right>=130);assert(left+right+gap+4+padding*2<=available+.001);
   }
   assert(css.includes('main { max-width: 940px; margin: auto; }'));
-  // All declarations in the new mobile override are scoped to selection.
   for(const selector of mobile.matchAll(/([^{}]+)\{/g))assert(selector[1].trim().startsWith('#selection-screen'));
 });
 test('Autoplay-allowed welcome is 2–3 seconds, claims the session before concurrent resumes and precedes music',async()=>{
@@ -367,4 +369,53 @@ test('Visibility, OS audio interruption and page cleanup stop resources and resu
   assert.equal(t.run('voices.welcome.size'),0);
   t.windowEvents.pagehide();assert.equal(t.intervals.size,0);assert.equal(ctx.state,'closed');assert.equal(t.run('audioContext'),null);assert.equal(t.run('voices.music.size+voices.effects.size+voices.welcome.size'),0);
   t.windowEvents.pageshow();await Promise.resolve();assert.equal(t.contexts(),2);assert.equal(t.run('voices.welcome.size'),0);
+});
+
+test('Wooden setup popups replace native selects/checkboxes and preserve every option and saved choice',()=>{
+  const setup=html.slice(html.indexOf('<section id="setup-screen"'),html.indexOf('<section id="game-screen"'));
+  assert(!/<select|type="checkbox"|type="radio"/.test(setup));
+  assert(!/<footer>/.test(html));assert(html.includes('role="switch"'));assert(html.includes('aria-modal="true"'));
+  for(const nativeDialog of [false,true]){
+    const t=browserHarness({nativeDialog});t.call('selectGame','morris');
+    assert.equal(t.get('#pick-difficulty').disabled,true);t.call('openChoice','difficulty');assert.equal(t.run('choiceOpen'),false);
+    t.get('#pick-mode').events.click();assert.equal(t.run('activeChoice'),'mode');assert.equal(t.get('#pick-mode').attributes['aria-expanded'],'true');
+    assert.equal(t.get('#choice-options').children.length,2);t.get('#choice-options').children[1].events.click();
+    assert.equal(t.get('#mode').value,'computer');assert.equal(t.get('#difficulty-field').hidden,false);assert.equal(t.get('#pick-difficulty').disabled,false);assert.equal(t.document.activeElement,t.get('#pick-mode'));
+    t.call('openChoice','difficulty');t.get('#choice-options').children[2].events.click();assert.equal(t.get('#difficulty').value,'hard');assert.equal(t.get('#value-difficulty').textContent,'Hard');
+    t.call('openChoice','side');t.get('#choice-options').children[1].events.click();assert.equal(t.get('#side').value,'O');
+    for(const color of ['redblue','greengold','blackwhite','purplesilver','browncream','orangesky']){
+      t.call('openChoice','colors');assert.equal(t.get('#palette-options').hidden,false);assert.equal(t.get('#choice-options').hidden,true);
+      const options=t.get('#palette-options').children;assert.equal(options.length,6);assert(options.every(o=>(o.innerHTML.match(/class="token /g)||[]).length===2));
+      options.find(o=>o.dataset.palette===color).events.click();assert.equal(t.get('#colors').value,color);assert.equal(t.run('choiceOpen'),false);assert.equal(JSON.parse(t.stored()).palette,color);
+    }
+    assert.equal(t.run('completed.morris'),0);assert.equal(t.run('completed.twelve'),0);
+    const restored=browserHarness({preferences:JSON.parse(t.stored()),nativeDialog});assert.equal(restored.get('#value-mode').textContent,'Player vs Computer');assert.equal(restored.get('#value-difficulty').textContent,'Hard');assert.equal(restored.get('#value-colors').textContent,'Orange vs Sky Blue');
+    t.call('openChoice','mode');t.get('#choice-options').children[0].events.click();assert.equal(t.get('#difficulty-field').hidden,true);
+  }
+});
+test('Popup keyboard focus, arrows, Home/End, Tab trap, Escape, close and backdrop work natively and in fallback',()=>{
+  for(const nativeDialog of [false,true]){
+    const t=browserHarness({nativeDialog});t.call('selectGame','twelve');t.call('openChoice','mode');
+    const dialog=t.get('#settings-dialog'),options=t.get('#choice-options').children;
+    assert.equal(t.document.activeElement,options[0]);
+    function key(key,shiftKey=false){let prevented=false;dialog.events.keydown({key,shiftKey,preventDefault(){prevented=true;}});return prevented;}
+    assert(key('ArrowDown'));assert.equal(t.document.activeElement,options[1]);key('ArrowDown');assert.equal(t.document.activeElement,options[0]);key('End');assert.equal(t.document.activeElement,options[1]);key('Home');assert.equal(t.document.activeElement,options[0]);
+    t.get('#close-choice').focus();key('Tab',true);assert.equal(t.document.activeElement,options[1]);key('Tab');assert.equal(t.document.activeElement,t.get('#close-choice'));
+    key('ArrowUp');assert.equal(t.document.activeElement,options[1]);
+    key('Escape');assert.equal(t.run('choiceOpen'),false);assert.equal(t.get('#pick-mode').attributes['aria-expanded'],'false');assert.equal(t.document.activeElement,t.get('#pick-mode'));assert.equal(t.get('#mode').value,'pvp');
+    t.call('openChoice','colors');dialog.events.cancel({preventDefault(){}});assert.equal(t.run('choiceOpen'),false);
+    t.call('openChoice','side');dialog.events.click({target:dialog});assert.equal(t.run('choiceOpen'),false);
+    t.call('openChoice','mode');t.get('#close-choice').events.click();assert.equal(t.run('choiceOpen'),false);
+    t.call('openChoice','colors');t.call('backToSelection');assert.equal(t.run('choiceOpen'),false);assert.equal(t.get('#choice-shade').hidden,true);
+  }
+});
+test('Golden audio switches synchronize with gameplay, retain saved preferences and keep music continuous',async()=>{
+  const t=browserHarness({sessionPlayed:true});t.call('selectGame','morris');const timer=[...t.intervals.keys()][0];
+  assert.equal(t.get('#setup-sound').attributes['aria-checked'],'true');assert.equal(t.get('#setup-music').attributes['aria-checked'],'true');
+  await t.get('#setup-sound').events.click();assert.equal(t.run('soundEnabled'),false);assert.equal(t.get('#setup-sound').attributes['aria-checked'],'false');assert.equal(t.get('#sound-toggle').attributes['aria-pressed'],'false');assert.equal(t.intervals.size,1);
+  await t.get('#setup-sound').events.click();assert.equal(t.run('soundEnabled'),true);assert.equal([...t.intervals.keys()][0],timer);
+  await t.get('#setup-music').events.click();assert.equal(t.run('musicEnabled'),false);assert.equal(t.get('#setup-music').attributes['aria-checked'],'false');assert.equal(t.intervals.size,0);
+  const restored=browserHarness({preferences:JSON.parse(t.stored())});assert.equal(restored.get('#setup-music').attributes['aria-checked'],'false');assert.equal(restored.intervals.size,0);
+  await t.get('#setup-music').events.click();t.call('playGame');const active=[...t.intervals.keys()][0];t.call('backToSetup');t.call('openChoice','colors');t.call('closeChoice');assert.equal([...t.intervals.keys()][0],active);
+  assert(t.get('#starter-hint').textContent.includes('Match 1'));assert(html.includes('seamless 64-beat loop'));assert.equal(t.run('musicVolume'),.18);
 });
