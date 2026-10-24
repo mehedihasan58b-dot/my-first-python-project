@@ -4,12 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#392016">
-  <title>Tin Guti — Three Men's Morris</title>
+  <title>Woodland Classics — Traditional Strategy Games</title>
   <style>
     * { box-sizing: border-box; }
     :root { color-scheme: dark; --top: #ba102c; --top-light: #ff5162; --top-dark: #510614; --bottom: #007f8b; --bottom-light: #49d9dd; --bottom-dark: #003a43; --gold: #e8bc68; }
     [hidden] { display: none !important; }
-    body { margin: 0; min-height: 100svh; padding: 24px 16px 36px; color: #fae6b9; background: radial-gradient(ellipse at 5% 0%, #34411b88, transparent 35%), radial-gradient(ellipse at 100% 90%, #26371599, transparent 28%), repeating-linear-gradient(3deg, #ffffff03 0 1px, #00000014 2px 4px, transparent 5px 11px), repeating-linear-gradient(94deg, #29150f 0, #402317 3%, #24120c 9%, #4d2b1b 16%, #29150f 24%); font-family: Georgia, 'Noto Serif Bengali', serif; }
+    body { margin: 0; min-height: 100svh; padding: 24px 16px 36px; color: #fae6b9; background: radial-gradient(ellipse at 5% 0%, #34411b88, transparent 35%), radial-gradient(ellipse at 100% 90%, #26371599, transparent 28%), repeating-linear-gradient(3deg, #ffffff03 0 1px, #00000014 2px 4px, transparent 5px 11px), repeating-linear-gradient(94deg, #29150f 0, #402317 3%, #24120c 9%, #4d2b1b 16%, #29150f 24%); font-family: Georgia, serif; }
     main { max-width: 940px; margin: auto; }
     button, select { font: inherit; }
     button { cursor: pointer; touch-action: manipulation; }
@@ -32,15 +32,25 @@
     .setup-audio { display: flex; flex-wrap: wrap; gap: 22px; margin: 26px 0; }
     .setup-audio label { display: flex; align-items: center; min-height: 44px; gap: 10px; }
     input { accent-color: #d2a451; width: 20px; height: 20px; }
-    .palette-preview { display: flex; justify-content: center; gap: 16px; margin: 24px 0; }
-    .palette-preview .token { width: 58px; height: 58px; }
+    .palette-options { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-top: 24px; }
+    .palette-choice { min-height: 86px; padding: 10px 5px; border: 1px solid #93693d; border-radius: 12px; background: #28190f; color: #f1d6a8; font: 11px system-ui,sans-serif; }
+    .palette-choice[aria-pressed="true"] { border: 2px solid #ffe29c; background: #624022; }
+    .palette-pair { display: flex; justify-content: center; gap: 10px; margin-bottom: 9px; }
+    .palette-choice .token { width: 28px; height: 28px; border-width: 2px; }
+    .cell .token.moved { animation: settle .24s ease-out; }
+    @keyframes settle { from { transform: scale(.7); opacity: .5; } to { transform: scale(1); opacity: 1; } }
+    .cell.captured::after { content: ''; position: absolute; inset: 25%; border-radius: 50%; border: 2px solid #ffe4a0; animation: capture-ring .35s ease-out both; pointer-events:none; }
+    @keyframes capture-ring { to { transform: scale(1.6); opacity:0; } }
+    .board-wrap.twelve .cell .token { width: 74%; border-width: 2px; }
+    .board-wrap.twelve .cell::before { width: 23%; }
+    @media(max-width: 400px) { .palette-options { grid-template-columns: repeat(2,1fr); } .board-frame { padding: 8px; } .cell.selected .token { outline-offset: 1px; } }
     .gold-button, .secondary-button { border: 1px solid #f4cd7c; border-radius: 12px; padding: 13px 20px; min-height: 48px; color: #fff3d6; font: 700 14px system-ui, sans-serif; background: linear-gradient(#ba7c24,#764006); box-shadow: inset 0 1px 2px #fff7, 0 4px 0 #301809, 0 7px 15px #0005; }
     .gold-button:hover { filter: brightness(1.13); }
     #play-game { width: 100%; font-size: 17px; }
     .secondary-button { background: linear-gradient(#4c392a,#221b16); border-color: #b39b72; }
     .game-top { display: grid; grid-template-columns: 1fr 1.25fr 1fr; align-items: center; gap: 16px; margin-bottom: 18px; }
     .game-top .brand { padding: 10px 8px; }
-    .game-top .brand h1 { font-size: clamp(32px, 6vw, 62px); white-space: nowrap; }
+    .game-top .brand h1 { font-size: clamp(20px, 3.5vw, 36px); white-space: normal; overflow-wrap: anywhere; }
     .score-card { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 14px 10px; border: 2px solid #b98242; border-radius: 18px; background: linear-gradient(130deg,#41120d,#190d0a); box-shadow: inset 0 0 0 2px #000,0 5px 10px #0006; min-width: 0; text-align: center; }
     #player-o { background: linear-gradient(130deg,#082e30,#0a1417); }
     .score-card.active { border-color: #ffe3a0; box-shadow: 0 0 18px #c8913b55,inset 0 0 0 2px #000; }
@@ -57,7 +67,7 @@
     .board-frame { width: min(100%, 780px); margin: auto; padding: clamp(13px,3vw,26px); border: 2px solid #d19c66; border-radius: clamp(20px,4vw,38px); background: repeating-linear-gradient(5deg,#ffffff08 0 1px,transparent 2px 7px), linear-gradient(125deg,#9b563a,#452014 23%,#9b5435 50%,#38160e 80%,#9b563a); box-shadow: inset 0 0 0 5px #4a2116,inset 0 0 0 8px #b7774f,0 10px 0 #281007,0 18px 35px #0009; }
     .board-wrap { position: relative; aspect-ratio: 1; border: 3px solid #42200d; border-radius: 12px; overflow: hidden; background: #e6ad63; box-shadow: inset 0 0 0 3px #ffdc98,inset 0 0 25px #8e4c1980; }
     #connections { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
-    .board { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(3,1fr); grid-template-rows: repeat(3,1fr); }
+    .board { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(var(--board-size,3),1fr); grid-template-rows: repeat(var(--board-size,3),1fr); }
     .cell { position: relative; border: 0; border-radius: 50%; background: transparent; min-width: 0; padding: 0; display: grid; place-items: center; -webkit-tap-highlight-color: transparent; }
     .cell::before { content: ''; position: absolute; width: 28%; aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle,#482a1c,#241309); border: 2px solid #f4c87e; box-shadow: 0 0 0 2px #61360f,0 2px 4px #0009; }
     .token { --piece: var(--top); --light: var(--top-light); --dark: var(--top-dark); position: relative; display: grid; place-items: center; aspect-ratio: 1; border-radius: 50%; border: 3px solid #ebbb5b; background: radial-gradient(ellipse at 27% 18%,#fff9 0 3%,transparent 17%),radial-gradient(circle at 36% 30%,var(--light),var(--piece) 42%,var(--dark) 74%); box-shadow: inset 0 0 0 2px #632e05,inset 0 0 0 5px #f4cd6b99,inset -3px -5px 6px #000a,0 4px 0 #6e3b0c,0 7px 7px #0009; }
@@ -74,260 +84,391 @@
     summary { cursor: pointer; text-align: center; padding: 10px; }
     footer { text-align: center; color: #a88a63; font-size: 11px; margin-top: 30px; }
     .svg-library { position: absolute; width: 0; height: 0; overflow: hidden; }
-    @media(max-width: 560px) { body { padding: 16px 12px 28px; } .game-top { gap: 6px; grid-template-columns: 1fr 1fr 1fr; } .score-card { flex-direction: column; gap: 7px; padding: 10px 4px; border-radius: 14px; } .score-card .token { width: 38px; height: 38px; } .score-card strong { margin-top: 2px; font-size: 23px; } .game-top .brand h1 { font-size: clamp(24px,7vw,36px); } .game-top .brand .eyebrow { font-size: 8px; letter-spacing: .08em; } .board-frame { padding: 12px; } .cell .token { border-width: 2px; } .toolbar { justify-content: center; } .settings { gap: 18px 12px; } }
-    @media(prefers-reduced-motion: reduce) { * { transition: none !important; } }
+    @media(max-width: 560px) { body { padding: 16px 12px 28px; } .game-top { gap: 6px; grid-template-columns: 1fr 1fr 1fr; } .score-card { flex-direction: column; gap: 7px; padding: 10px 4px; border-radius: 14px; } .score-card .token { width: 38px; height: 38px; } .score-card strong { margin-top: 2px; font-size: 23px; } .game-top .brand h1 { font-size: clamp(16px,4.5vw,25px); } .game-top .brand .eyebrow { font-size: 8px; letter-spacing: .08em; } .board-frame { padding: 12px; } .cell .token { border-width: 2px; } .toolbar { justify-content: center; } .settings { gap: 18px 12px; } }
+    @media(prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
   </style>
 </head>
 <body>
   <svg class="svg-library" aria-hidden="true"><defs><g id="petal-flower" fill="none" stroke="currentColor" stroke-width="1.7"><g id="petals"><path d="M50 44 Q35 29 50 12 Q65 29 50 44Z"/><path d="M50 44 Q35 29 50 12 Q65 29 50 44Z" transform="rotate(45 50 50)"/><path d="M50 44 Q35 29 50 12 Q65 29 50 44Z" transform="rotate(90 50 50)"/><path d="M50 44 Q35 29 50 12 Q65 29 50 44Z" transform="rotate(135 50 50)"/><path d="M50 44 Q35 29 50 12 Q65 29 50 44Z" transform="rotate(180 50 50)"/><path d="M50 44 Q35 29 50 12 Q65 29 50 44Z" transform="rotate(225 50 50)"/><path d="M50 44 Q35 29 50 12 Q65 29 50 44Z" transform="rotate(270 50 50)"/><path d="M50 44 Q35 29 50 12 Q65 29 50 44Z" transform="rotate(315 50 50)"/></g><circle cx="50" cy="50" r="7"/><circle cx="50" cy="50" r="29" stroke-opacity=".3"/></g></defs></svg>
   <main>
     <section id="setup-screen" class="wood-panel" aria-labelledby="setup-title">
-      <header class="brand"><span class="eyebrow">A timeless little rivalry</span><h1 lang="bn">তিন গুটি</h1><p>Tin Guti · Three Men's Morris</p></header>
+      <header class="brand"><span class="eyebrow">A timeless little rivalry</span><h1>Woodland Classics</h1><p>Two timeless games. One beautiful table.</p></header>
       <div class="setup-heading"><h2 id="setup-title" tabindex="-1">Game Setup</h2><p>Choose your opponent, pick your pieces, and take a seat.</p></div>
       <div class="settings">
+        <label>Choose a game<select id="game"><option value="morris">Three Men's Morris</option><option value="twelve">Twelve Guti</option></select></label>
         <label>Game mode<select id="mode"><option value="pvp">Player vs Player</option><option value="computer">Player vs Computer</option></select></label>
-        <label>Computer difficulty<select id="difficulty" disabled><option value="easy">Easy</option><option value="medium">Medium</option><option value="hard">Hard</option></select></label>
-        <label>Piece color set<select id="colors"><option value="ruby">Ruby &amp; Teal</option><option value="sapphire">Sapphire &amp; Amber</option><option value="emerald">Emerald &amp; Amethyst</option><option value="pearl">Ivory &amp; Onyx</option></select></label>
+        <label id="difficulty-field" hidden>Computer difficulty<select id="difficulty" disabled><option value="easy">Easy</option><option value="medium">Medium</option><option value="hard">Hard</option></select></label>
+        <label>Piece color set<select id="colors"><option value="redblue">Red vs Blue</option><option value="greengold">Green vs Gold</option><option value="blackwhite">Black vs White</option><option value="purplesilver">Purple vs Silver</option><option value="browncream">Brown vs Cream</option><option value="orangesky">Orange vs Sky Blue</option></select></label>
         <label>Your side (Player 1)<select id="side"><option value="X">Top pieces</option><option value="O">Bottom pieces</option></select></label>
       </div>
-      <div class="palette-preview" aria-hidden="true"><span class="token x"><svg class="flower" viewBox="0 0 100 100" aria-hidden="true"><use href="#petal-flower"/></svg></span><span class="token o"><svg class="flower" viewBox="0 0 100 100" aria-hidden="true"><use href="#petal-flower"/></svg></span></div>
+      <div id="palette-options" class="palette-options" role="group" aria-label="Piece color previews"></div>
       <div class="setup-audio"><label><input id="setup-sound" type="checkbox" checked>Sound effects</label><label><input id="setup-music" type="checkbox">Background music</label></div>
       <p id="starter-hint" class="score-note">Player 1 starts match 1. The first turn alternates after each completed match.</p>
       <button id="play-game" class="gold-button">Play Game →</button>
     </section>
-    <section id="game-screen" hidden aria-label="Tin Guti gameplay">
+    <section id="game-screen" hidden aria-label="Board game">
       <header class="game-top">
         <div id="player-x" class="score-card"><span class="token x" aria-hidden="true"><svg class="flower" viewBox="0 0 100 100" aria-hidden="true"><use href="#petal-flower"/></svg></span><div><span id="x-name" class="player-name">Player 1</span><strong id="score-x">0</strong></div></div>
-        <div class="brand wood-panel"><span class="eyebrow">Tin Guti</span><h1 lang="bn">তিন গুটি</h1></div>
+        <div class="brand wood-panel"><span class="eyebrow">Woodland Classics</span><h1 id="game-title">Three Men's Morris</h1></div>
         <div id="player-o" class="score-card"><span class="token o" aria-hidden="true"><svg class="flower" viewBox="0 0 100 100" aria-hidden="true"><use href="#petal-flower"/></svg></span><div><span id="o-name" class="player-name">Player 2</span><strong id="score-o">0</strong></div></div>
       </header>
-      <div class="toolbar"><span class="draw-badge">Draws · <strong id="score-draw">0</strong></span><div class="audio-controls" aria-label="Audio settings"><button id="sound-toggle" aria-pressed="true">♫ Sound ON</button><button id="music-toggle" aria-pressed="false">♪ Music OFF</button></div></div>
+      <div class="toolbar"><span class="draw-badge">Draws · <strong id="score-draw">0</strong></span><span id="capture-count" class="draw-badge" hidden></span><div class="audio-controls" aria-label="Audio settings"><button id="sound-toggle" aria-pressed="true">♫ Sound ON</button><button id="music-toggle" aria-pressed="false">♪ Music OFF</button></div></div>
       <div class="board-frame"><div class="board-wrap">
         <svg id="connections" viewBox="0 0 300 300" aria-hidden="true"><defs><filter id="grain"><feTurbulence type="fractalNoise" baseFrequency=".035 .55" numOctaves="3" seed="8"/><feColorMatrix type="saturate" values="0"/><feBlend in="SourceGraphic" mode="soft-light"/></filter><linearGradient id="wood" x2="0" y2="1"><stop stop-color="#f5ce8d"/><stop offset=".48" stop-color="#e5a85f"/><stop offset="1" stop-color="#f1c17c"/></linearGradient></defs><rect width="300" height="300" fill="url(#wood)"/><rect width="300" height="300" fill="#b97d3b" filter="url(#grain)" opacity=".23"/><rect x="5" y="5" width="290" height="290" rx="8" stroke="#bd813e" fill="none"/><g stroke="#e8b666" stroke-width="6" fill="none"><path id="board-lines" d="M50 50H250 M50 150H250 M50 250H250 M50 50V250 M150 50V250 M250 50V250 M50 50L250 250 M250 50L50 250"/></g><use href="#board-lines" stroke="#47230e" stroke-width="4" fill="none"/></svg>
-        <div class="board" role="group" aria-label="Tin Guti board, three rows and three columns">
-          <button class="cell" aria-label="Row 1, column 1"></button>
-          <button class="cell" aria-label="Row 1, column 2"></button>
-          <button class="cell" aria-label="Row 1, column 3"></button>
-          <button class="cell" aria-label="Row 2, column 1"></button>
-          <button class="cell" aria-label="Row 2, column 2"></button>
-          <button class="cell" aria-label="Row 2, column 3"></button>
-          <button class="cell" aria-label="Row 3, column 1"></button>
-          <button class="cell" aria-label="Row 3, column 2"></button>
-          <button class="cell" aria-label="Row 3, column 3"></button>
-        </div>
+        <div id="board" class="board" role="group" aria-label="Game board"></div>
       </div></div>
       <p id="status" role="status" aria-live="polite" aria-atomic="true"></p><p id="phase"></p>
-      <div class="game-actions"><button id="back-setup" class="secondary-button">← Back to Setup</button><button id="restart" class="gold-button">↻ Restart</button></div>
-      <p class="score-note">Session scores for this mode, difficulty and side</p><button id="reset-scores">Reset scores</button>
-      <details><summary>How to play · Custom rules</summary><p>Player 1 starts the first match; the first turn alternates only after a win or draw. Restarting an unfinished match keeps the same starter. Top starts with three pieces, bottom with three; the middle row is empty. Select your piece, then a highlighted adjacent empty point connected by a line. No jumping. Only the middle row (3,4,5), middle column (1,4,7) and diagonals (0,4,8), (2,4,6) win. Outer rows and columns never win. A blocked player loses. Three repetitions of the same board and turn, or 100 moves, draw. Restart restores the six original pieces. Back to Setup ends the round without changing scores.</p></details>
+      <div class="game-actions"><button id="back-setup" class="secondary-button">← Back to Setup</button><button id="restart" class="gold-button">↻ Restart</button><button id="next-match" class="gold-button" hidden>Next Match →</button></div>
+      <p class="score-note">Separate session scores for each game, mode, difficulty and side</p><button id="reset-scores">Reset scores</button>
+      <details><summary>How to play</summary><p id="game-rules"></p></details>
     </section>
     <p id="audio-note">Audio starts after your first tap. Music is optional.</p>
     <footer>Made for a little friendly competition.</footer>
   </main>
   <script>
-    // Tin Guti rules are shared by the interface and computer search.
-    const $ = selector => document.querySelector(selector);
-    const cells = Array.from(document.querySelectorAll('.cell'));
-    const status = $('#status'), mode = $('#mode'), difficulty = $('#difficulty');
-    // Movement uses all drawn lines; wins use only the four central lines.
-    const connectionLines = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
-    const winningLines = [[3,4,5],[1,4,7],[0,4,8],[2,4,6]];
-    // Only consecutive points on a drawn line are adjacent. No jumping.
-    const neighbors = Array.from({ length: 9 }, () => new Set());
-    connectionLines.forEach(line => {
-      for (let i = 0; i < 2; i++) {
-        neighbors[line[i]].add(line[i + 1]);
-        neighbors[line[i + 1]].add(line[i]);
+    // Pure rules shared by humans, AI, board drawing and the tests.
+    function createRules() {
+      const other = mark => mark === 'X' ? 'O' : 'X';
+      const wins = [[3,4,5],[1,4,7],[0,4,8],[2,4,6]];
+      const size = game => game === 'twelve' ? 5 : 3;
+      const graph = game => {
+        const n = size(game), links = Array.from({ length: n*n }, () => []);
+        for (let from = 0; from < n*n; from++) {
+          const row = Math.floor(from/n), col = from%n;
+          for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) {
+            if ((!dr && !dc) || (dr && dc && (row+col)%2 !== 0)) continue;
+            const r = row+dr, c = col+dc;
+            if (r >= 0 && r < n && c >= 0 && c < n) links[from].push(r*n+c);
+          }
+        }
+        return links;
+      };
+      const graphs = { morris: graph('morris'), twelve: graph('twelve') };
+      const initial = game => game === 'twelve' ? Array.from({length:25}, (_,i) => i < 12 ? 'X' : i === 12 ? '' : 'O') : ['X','X','X','','','','O','O','O'];
+      const line = (game,b) => game === 'morris' ? wins.find(l => b[l[0]] && l.every(i => b[i] === b[l[0]])) : undefined;
+      function captures(game, b, turn, only = null) {
+        if (game !== 'twelve') return [];
+        const n = size(game), links = graphs[game], result = [];
+        b.forEach((v,from) => {
+          if (v !== turn || (only !== null && from !== only)) return;
+          for (const mid of links[from]) {
+            if (b[mid] !== other(turn)) continue;
+            const r = 2*Math.floor(mid/n)-Math.floor(from/n), c = 2*(mid%n)-(from%n);
+            if (r < 0 || r >= n || c < 0 || c >= n) continue;
+            const to = r*n+c;
+            if (!b[to] && links[mid].includes(to)) result.push({from,to,captured:mid});
+          }
+        });
+        return result;
       }
-    });
-    // Starting outer rows never count as wins under these custom rules.
-    const STARTING_BOARD = Object.freeze(['X','X','X','','','','O','O','O']);
-    const palettes = {
-      ruby: { names: ['Ruby', 'Teal'], values: ['#ba102c','#ff5162','#510614','#007f8b','#49d9dd','#003a43'] },
-      sapphire: { names: ['Sapphire', 'Amber'], values: ['#154aaa','#70afff','#061e53','#c57a0c','#ffdb6e','#6d3506'] },
-      emerald: { names: ['Emerald', 'Amethyst'], values: ['#117846','#60d597','#033e26','#782fa2','#d58aef','#341044'] },
-      pearl: { names: ['Ivory', 'Onyx'], values: ['#dfd0a8','#fff9df','#89754e','#383b43','#8a8d97','#101117'] }
-    };
-    let active = false, humanSide = 'X', currentPalette = 'ruby';
-    // Only completed matches advance the starter; settings and score resets do not.
-    let completedMatches = 0, matchNumber = 1;
-    const playerName = mark => `${palettes[currentPalette].names[mark === 'X' ? 0 : 1]} (${mark === 'X' ? 'Top' : 'Bottom'})`;
-    const computerSide = () => humanSide === 'X' ? 'O' : 'X';
-    const isComputerTurn = () => mode.value === 'computer' && currentPlayer === computerSide();
-    const tokenArtwork = '<svg class="flower" viewBox="0 0 100 100" aria-hidden="true"><use href="#petal-flower"/></svg>';
-    function applyPalette() {
-      currentPalette = $('#colors').value;
-      const values = palettes[currentPalette].values;
-      ['--top','--top-light','--top-dark','--bottom','--bottom-light','--bottom-dark'].forEach((name, i) => document.documentElement.style.setProperty(name, values[i]));
+      function moves(game,b,turn,forced = null) {
+        if (line(game,b)) return [];
+        const jumps = captures(game,b,turn,forced);
+        if (forced !== null || jumps.length) return jumps;
+        return b.flatMap((v,from) => v !== turn ? [] : graphs[game][from].filter(to => !b[to]).map(to => ({from,to,captured:null})));
+      }
+      function apply(b,move,turn) {
+        const next = b.slice(); next[move.from] = ''; next[move.to] = turn;
+        if (move.captured !== null) next[move.captured] = '';
+        return next;
+      }
+      // Enumerate complete turns, not individual jumps, for search evaluation.
+      // A capture removes one enemy each time, so recursion cannot cycle.
+      function turns(game,b,turn,forced = null, visit = () => {}) {
+        const result = [];
+        function extend(state, move, path) {
+          visit();
+          const next = apply(state,move,turn), steps = [...path,move];
+          const more = move.captured === null ? [] : captures(game,next,turn,move.to);
+          if (more.length) more.forEach(m => extend(next,m,steps));
+          else result.push({steps,board:next});
+        }
+        moves(game,b,turn,forced).forEach(m => extend(b,m,[]));
+        return result;
+      }
+      const key = (b,turn) => b.map(v => v || '-').join('')+turn;
+      function outcome(game,b,turn,seen = new Map(),quiet = 0) {
+        const winning = line(game,b);
+        if (winning) return {winner:b[winning[0]],reason:'Three pieces on a central winning line.'};
+        if (!b.includes(turn)) return {winner:other(turn),reason:'No opposing pieces remain.'};
+        if (!moves(game,b,turn).length) return {winner:other(turn),reason:'The opponent has no legal moves.'};
+        if ((seen.get(key(b,turn)) || 0) >= 3) return {winner:'draw',reason:'The same board and turn occurred three times.'};
+        if (quiet >= 100) return {winner:'draw',reason:game === 'twelve' ? '100 turns without a capture.' : '100 movement turns reached.'};
+        return null;
+      }
+      function evaluate(game,b,ai) {
+        const enemy = other(ai);
+        if (game === 'morris') return wins.reduce((score,l) => {
+          const own = l.filter(i => b[i] === ai).length, opp = l.filter(i => b[i] === enemy).length;
+          return score+(opp?0:[0,3,20,500][own])-(own?0:[0,3,20,500][opp]);
+        },0);
+        let score = 0;
+        b.forEach((v,i) => {
+          if (!v) return;
+          const central = 4-Math.abs(2-Math.floor(i/5))-Math.abs(2-i%5);
+          score += (v === ai ? 1 : -1)*(100+central*3);
+        });
+        return score+2*(moves(game,b,ai).length-moves(game,b,enemy).length);
+      }
+      return {other,wins,size,graphs,initial,line,captures,moves,apply,turns,key,outcome,evaluate};
     }
-    function ownerName(mark) {
-      return mode.value === 'computer' ? (mark === humanSide ? 'You (Player 1)' : 'Computer (Player 2)') : (mark === humanSide ? 'Player 1' : 'Player 2');
+
+    // Iterative deepening with alpha-beta and a hard time/node budget. Whole
+    // capture chains form one turn. This function also runs inside a Web Worker.
+    function chooseAI(rules, job) {
+      const {game,board,turn,level,forced=null,history=[],quiet=0,budget=100} = job;
+      const clock = () => typeof performance !== 'undefined' ? performance.now() : Date.now();
+      const deadline = clock()+budget, seen = new Map(history), ai = turn;
+      let nodes = 0;
+      const interrupted = {};
+      function check() { if (++nodes > 30000 || clock() > deadline) throw interrupted; }
+      // Legal fallback: even an interrupted search finishes a capture chain.
+      const firstMoves = rules.moves(game,board,turn,forced);
+      if (!firstMoves.length) return null;
+      function randomTurn() {
+        let b = board, legal = firstMoves, steps = [];
+        while (legal.length) {
+          const move = legal[Math.floor(Math.random()*legal.length)]; steps.push(move);
+          b = rules.apply(b,move,turn);
+          legal = move.captured === null ? [] : rules.captures(game,b,turn,move.to);
+        }
+        return {steps,board:b};
+      }
+      let best = randomTurn();
+      if (level === 'easy') return best.steps;
+      const ordered = actions => actions.sort((a,b) => {
+        const value = action => rules.line(game,action.board) ? 100000 : (action.steps.filter(s=>s.captured!==null).length*500+rules.evaluate(game,action.board,ai));
+        return value(b)-value(a);
+      });
+      function nextQuiet(action,q) { return action.steps.some(s=>s.captured!==null) ? 0 : q+1; }
+      function search(b,player,depth,alpha,beta,q,ply) {
+        check();
+        const result = rules.outcome(game,b,player,seen,q);
+        if (result) return result.winner === 'draw' ? 0 : result.winner === ai ? 100000-ply : ply-100000;
+        if (!depth) return rules.evaluate(game,b,ai);
+        const actions = ordered(rules.turns(game,b,player,null,check));
+        const maximizing = player === ai;
+        let score = maximizing ? -Infinity : Infinity;
+        for (const action of actions) {
+          const next = rules.other(player), k = rules.key(action.board,next), old = seen.get(k)||0;
+          seen.set(k,old+1);
+          let value;
+          try { value = search(action.board,next,depth-1,alpha,beta,nextQuiet(action,q),ply+1); }
+          finally { if (old) seen.set(k,old); else seen.delete(k); }
+          if (maximizing) { score = Math.max(score,value); alpha = Math.max(alpha,score); }
+          else { score = Math.min(score,value); beta = Math.min(beta,score); }
+          if (alpha >= beta) break;
+        }
+        return score;
+      }
+      try {
+        const actions = ordered(rules.turns(game,board,turn,forced,check));
+        best = actions[0];
+        const maxDepth = level === 'medium' ? 2 : game === 'morris' ? 8 : 5;
+        for (let depth=1; depth<=maxDepth; depth++) {
+          let candidate = best, high = -Infinity;
+          for (const action of actions) {
+            const next = rules.other(turn), k = rules.key(action.board,next), old = seen.get(k)||0;
+            seen.set(k,old+1);
+            let value;
+            try { value = search(action.board,next,depth-1,-Infinity,Infinity,nextQuiet(action,quiet),1); }
+            finally { if (old) seen.set(k,old); else seen.delete(k); }
+            if (value > high) { high=value;candidate=action; }
+          }
+          best=candidate;
+          if (high >= 99900) break;
+        }
+      } catch (error) { if (error !== interrupted) throw error; }
+      return best.steps;
+    }
+    const $ = selector => document.querySelector(selector);
+    const rules = createRules();
+    const titles = {morris:"Three Men's Morris",twelve:'Twelve Guti'};
+    const tokenArtwork = '<svg class="flower" viewBox="0 0 100 100" aria-hidden="true"><use href="#petal-flower"/></svg>';
+    const palettes = {
+      redblue:{name:'Red vs Blue',names:['Red','Blue'],values:['#ba102c','#ff5162','#510614','#145ab4','#6fb6ff','#082b5b']},
+      greengold:{name:'Green vs Gold',names:['Green','Gold'],values:['#117846','#60d597','#033e26','#c58a18','#ffe894','#755009']},
+      blackwhite:{name:'Black vs White',names:['Black','White'],values:['#34363d','#8a8d97','#101117','#e9e1ce','#ffffff','#9f9176']},
+      purplesilver:{name:'Purple vs Silver',names:['Purple','Silver'],values:['#782fa2','#d58aef','#341044','#aeb9c6','#f6faff','#5f6c7c']},
+      browncream:{name:'Brown vs Cream',names:['Brown','Cream'],values:['#794323','#c68f55','#3b1e0d','#e0c89b','#fff0cd','#978057']},
+      orangesky:{name:'Orange vs Sky Blue',names:['Orange','Sky Blue'],values:['#d66314','#ffba64','#7a2708','#2695c3','#91e5ff','#07415c']}
+    };
+    let config = {game:'morris',mode:'pvp',level:'easy',side:'X'};
+    let currentPalette='redblue', active=false, board=[], turn='X', selected=null, forced=null, gameOver=false;
+    let quiet=0, turnNumber=0, captureInTurn=false, history=new Map(), lastMove=null, lastCaptured=null;
+    const scores={}, completed={morris:0,twelve:0};
+    let cells=[], aiTimer=null, aiWorker=null, aiURL=null, aiVersion=0, aiPlan=[];
+    const computerSide = () => rules.other(config.side);
+    const isComputerTurn = () => config.mode==='computer' && turn===computerSide();
+    const ownerName = mark => config.mode==='computer' ? (mark===config.side?'You (Player 1)':'Computer (Player 2)') : (mark===config.side?'Player 1':'Player 2');
+    const playerName = mark => palettes[currentPalette].names[mark==='X'?0:1];
+    const scoreKey = () => `${config.game}:${config.mode}:${config.mode==='computer'?config.level:''}:${config.side}`;
+    const currentScores = () => scores[scoreKey()] ||= {X:0,O:0,draw:0};
+    const preferenceKey='woodland-classics-preferences-v1';
+    function savePreferences() {
+      try { localStorage.setItem(preferenceKey,JSON.stringify({game:$('#game').value,mode:$('#mode').value,level:$('#difficulty').value,palette:$('#colors').value,side:$('#side').value,sound:soundEnabled,music:musicEnabled})); } catch { /* Private storage may be unavailable. */ }
+    }
+    function loadPreferences() {
+      try {
+        const p=JSON.parse(localStorage.getItem(preferenceKey)||'{}');
+        for (const [id,key,allowed] of [['game','game',['morris','twelve']],['mode','mode',['pvp','computer']],['difficulty','level',['easy','medium','hard']],['colors','palette',Object.keys(palettes)],['side','side',['X','O']]]) {
+          if (allowed.includes(p[key])) $('#'+id).value=p[key];
+        }
+        if (typeof p.sound==='boolean') soundEnabled=p.sound;
+        if (typeof p.music==='boolean') musicEnabled=p.music;
+      } catch { /* Ignore malformed or blocked local storage. */ }
+    }
+    function applyPalette() {
+      currentPalette=$('#colors').value;
+      palettes[currentPalette].values.forEach((value,i)=>document.documentElement.style.setProperty(['--top','--top-light','--top-dark','--bottom','--bottom-light','--bottom-dark'][i],value));
+      document.querySelectorAll('.palette-choice').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.palette===currentPalette)));
+    }
+    function buildPaletteChoices() {
+      $('#palette-options').innerHTML='';
+      for (const [key,palette] of Object.entries(palettes)) {
+        const button=document.createElement('button');button.type='button';button.className='palette-choice';button.dataset.palette=key;
+        palette.values.forEach((value,i)=>button.style.setProperty(['--top','--top-light','--top-dark','--bottom','--bottom-light','--bottom-dark'][i],value));
+        button.innerHTML=`<span class="palette-pair" aria-hidden="true"><span class="token x">${tokenArtwork}</span><span class="token o">${tokenArtwork}</span></span>${palette.name}`;
+        button.addEventListener('click',()=>{$('#colors').value=key;applyPalette();savePreferences();});
+        $('#palette-options').append(button);
+      }
     }
     function updateStarterHint() {
-      const first = completedMatches % 2 === 0 ? 'Player 1' : 'Player 2';
-      $('#starter-hint').textContent = `Match ${completedMatches + 1}: ${first} moves first. Only a win or draw switches the next starter; restarting an unfinished match does not.`;
+      const game=$('#game').value, count=completed[game];
+      $('#starter-hint').textContent=`${titles[game]} · Match ${count+1}: Player ${count%2===0?1:2} moves first. Only a completed match advances the sequence.`;
     }
-    function updatePlayerNames() {
-      for (const mark of ['X','O']) {
-        const owner = ownerName(mark);
-        $(mark === 'X' ? '#x-name' : '#o-name').textContent = `${owner} · ${palettes[currentPalette].names[mark === 'X' ? 0 : 1]}`;
+    function setupChanged() {
+      $('#difficulty-field').hidden=$('#mode').value!=='computer';
+      $('#difficulty').disabled=$('#mode').value!=='computer';
+      applyPalette();updateStarterHint();savePreferences();
+    }
+    function drawBoard() {
+      const n=rules.size(config.game), container=$('#board');container.innerHTML='';cells=[];
+      document.documentElement.style.setProperty('--board-size',n);
+      $('.board-wrap').classList.toggle('twelve',config.game==='twelve');
+      container.setAttribute('aria-label',`${titles[config.game]}, ${n} rows and ${n} columns`);
+      let path='';
+      const point=i=>[150/n+(i%n)*300/n,150/n+Math.floor(i/n)*300/n];
+      rules.graphs[config.game].forEach((neighbors,from)=>neighbors.forEach(to=>{
+        if (from<to) { const a=point(from),b=point(to);path+=`M${a[0]} ${a[1]}L${b[0]} ${b[1]} `; }
+      }));
+      $('#board-lines').setAttribute('d',path);
+      for (let i=0;i<n*n;i++) {
+        const cell=document.createElement('button');cell.type='button';cell.className='cell';
+        cell.addEventListener('click',()=>makeMove(i));container.append(cell);cells.push(cell);
       }
-    }
-    let board, currentPlayer, gameOver;
-    let selected = null, computerTimer = null, movementTurns = 0, history = new Map();
-    const scores = {};
-    const other = mark => mark === 'X' ? 'O' : 'X';
-    const stateKey = (state, turn) => state.map(x => x || '-').join('') + turn;
-    function winnerLine(state) {
-      return winningLines.find(line => state[line[0]] && line.every(i => state[i] === state[line[0]]));
-    }
-    function legalMoves(state, turn) {
-      if (winnerLine(state)) return [];
-      return state.flatMap((v, from) => v !== turn ? [] :
-        [...neighbors[from]].filter(to => !state[to]).map(to => ({ from, to })));
-    }
-    function applyMove(state, move, turn) {
-      const next = state.slice();
-      next[move.from] = '';
-      next[move.to] = turn;
-      return next;
-    }
-    function scoreKey() { return `${mode.value}:${mode.value === 'computer' ? difficulty.value : ''}:${humanSide}`; }
-    function currentScores() { return scores[scoreKey()] ||= { X: 0, O: 0, draw: 0 }; }
-    function updateScores() {
-      const score = currentScores();
-      $('#score-x').textContent = score.X;
-      $('#score-o').textContent = score.O;
-      $('#score-draw').textContent = score.draw;
-    }
-    // A blocked player loses. Repeating board + turn three times is a draw.
-    // A 100-movement-turn cap guarantees termination even without repetition.
-    function outcome(state, turn, seen, steps) {
-      const line = winnerLine(state);
-      if (line) return { winner: state[line[0]], reason: 'Three in a row!' };
-      if (!legalMoves(state, turn).length) return { winner: other(turn), reason: `${playerName(turn)} has no legal moves.` };
-      if ((seen.get(stateKey(state, turn)) || 0) >= 3)
-        return { winner: 'draw', reason: 'Same position and turn repeated three times.' };
-      if (steps >= 100) return { winner: 'draw', reason: '100 movement turns reached.' };
-      return null;
     }
     function render() {
-      const computerTurn = isComputerTurn();
-      const line = winnerLine(board);
-      const targets = selected === null ? [] : legalMoves(board, currentPlayer).filter(m => m.from === selected).map(m => m.to);
-      cells.forEach((cell, index) => {
-        cell.innerHTML = board[index] ? `<span class="token ${board[index].toLowerCase()}" aria-hidden="true">${tokenArtwork}</span>` : '';
-        cell.className = 'cell' + (board[index] ? ' ' + board[index].toLowerCase() : '');
-        if (line?.includes(index)) cell.classList.add('winner');
-        if (selected === index) cell.classList.add('selected');
-        if (targets.includes(index)) cell.classList.add('target');
-        cell.disabled = !active || gameOver || computerTurn || !(board[index] === currentPlayer || targets.includes(index));
-        cell.setAttribute('aria-label', `Row ${Math.floor(index/3)+1}, column ${index%3+1}, ${board[index] ? playerName(board[index]) : 'empty'}${selected === index ? ', selected' : ''}${targets.includes(index) ? ', legal destination' : ''}`);
-        cell.setAttribute('aria-pressed', String(selected === index));
+      const legal=rules.moves(config.game,board,turn,forced), targets=selected===null?[]:legal.filter(m=>m.from===selected).map(m=>m.to);
+      const winning=rules.line(config.game,board), n=rules.size(config.game), computer=isComputerTurn();
+      cells.forEach((cell,i)=>{
+        cell.className='cell'+(board[i]?' '+board[i].toLowerCase():'');
+        if (selected===i) cell.classList.add('selected');
+        if (targets.includes(i)) cell.classList.add('target');
+        if (winning?.includes(i)) cell.classList.add('winner');
+        if (lastCaptured===i) cell.classList.add('captured');
+        cell.innerHTML=board[i]?`<span class="token ${board[i].toLowerCase()}${lastMove===i?' moved':''}" aria-hidden="true">${tokenArtwork}</span>`:'';
+        cell.disabled=!active||gameOver||computer||!(legal.some(m=>m.from===i)||targets.includes(i));
+        cell.setAttribute('aria-label',`Row ${Math.floor(i/n)+1}, column ${i%n+1}, ${board[i]?playerName(board[i]):'empty'}${selected===i?', selected':''}${targets.includes(i)?', legal destination':''}`);
+        cell.setAttribute('aria-pressed',String(selected===i));
       });
-      $('#player-x').classList.toggle('active', active && !gameOver && currentPlayer === 'X');
-      $('#player-o').classList.toggle('active', active && !gameOver && currentPlayer === 'O');
-      if (!gameOver) status.textContent = computerTurn ? `${ownerName(currentPlayer)} — ${playerName(currentPlayer)} is thinking…` :
-        `${ownerName(currentPlayer)} · ${playerName(currentPlayer)}'s turn — ${selected === null ? 'select your piece' : 'tap a highlighted destination'}`;
-      $('#phase').textContent = `Match ${matchNumber} · Move ${movementTurns}/100 · adjacent moves only`;
-      updateScores();
-    }
-    function heuristic(state) {
-      return winningLines.reduce((value, line) => {
-        const xs = line.filter(i => state[i] === 'X').length;
-        const os = line.filter(i => state[i] === 'O').length;
-        return value + (xs ? 0 : [0,2,12,100][os]) - (os ? 0 : [0,2,12,100][xs]);
-      }, 0);
-    }
-    // Alpha-beta Minimax searches 8 plies for Hard and 2 for Medium.
-    // Search tracks actual repetition counts and the movement cap on each path.
-    function search(state, turn, depth, seen, steps, alpha = -Infinity, beta = Infinity) {
-      const result = outcome(state, turn, seen, steps);
-      if (result) return result.winner === 'draw' ? 0 : result.winner === 'O' ? 10000 + depth : -10000 - depth;
-      if (!depth) return heuristic(state);
-      let best = turn === 'O' ? -Infinity : Infinity;
-      for (const move of legalMoves(state, turn)) {
-        const next = applyMove(state, move, turn), nextTurn = other(turn);
-        const key = stateKey(next, nextTurn), old = seen.get(key) || 0;
-        seen.set(key, old + 1);
-        const value = search(next, nextTurn, depth - 1, seen,
-          steps + 1, alpha, beta);
-        if (old) seen.set(key, old); else seen.delete(key);
-        if (turn === 'O') { best = Math.max(best, value); alpha = Math.max(alpha, best); }
-        else { best = Math.min(best, value); beta = Math.min(beta, best); }
-        if (beta <= alpha) break;
+      const score=currentScores();
+      for (const mark of ['X','O']) {
+        $(mark==='X'?'#player-x':'#player-o').classList.toggle('active',active&&!gameOver&&turn===mark);
+        $(mark==='X'?'#x-name':'#o-name').textContent=`${ownerName(mark)} · ${playerName(mark)}`;
+        $(mark==='X'?'#score-x':'#score-o').textContent=score[mark];
       }
-      return best;
-    }
-    function chooseComputerMove(state, level, seen = history, steps = movementTurns, aiMark = computerSide()) {
-      const moves = legalMoves(state, aiMark);
-      if (!moves.length) return null;
-      if (level === 'easy') return moves[Math.floor(Math.random() * moves.length)];
-      let best = aiMark === 'O' ? -Infinity : Infinity, choice = moves[0];
-      const depth = level === 'hard' ? 8 : 2;
-      for (const move of moves) {
-        const next = applyMove(state, move, aiMark), nextSeen = new Map(seen), key = stateKey(next, other(aiMark));
-        nextSeen.set(key, (nextSeen.get(key) || 0) + 1);
-        const value = search(next, other(aiMark), depth - 1, nextSeen, steps + 1);
-        if (aiMark === 'O' ? value > best : value < best) { best = value; choice = move; }
+      $('#score-draw').textContent=score.draw;
+      $('#capture-count').hidden=config.game!=='twelve';
+      $('#capture-count').textContent=`${ownerName('X')} captured ${12-board.filter(v=>v==='O').length} · ${ownerName('O')} captured ${12-board.filter(v=>v==='X').length}`;
+      if (!gameOver) {
+        const instruction=forced!==null?'continue capturing with the same piece':legal.some(m=>m.captured!==null)?(selected===null?'capture required — select a capturing piece':'choose a highlighted capture'):selected===null?'select your piece':'choose a highlighted adjacent point';
+        $('#status').textContent=`${ownerName(turn)} · ${playerName(turn)}${computer?' is thinking…':"'s turn — "+instruction}`;
       }
-      return choice;
+      $('#phase').textContent=`Match ${completed[config.game]+(gameOver?0:1)} · Turn ${turnNumber+1}${config.game==='morris'?` · ${quiet}/100 moves`:` · ${board.filter(Boolean).length} pieces remaining`}`;
+      $('#next-match').hidden=!gameOver;
+      lastMove=null;lastCaptured=null;
     }
     function finish(result) {
       if (gameOver) return;
-      gameOver = true;
-      completedMatches++;
-      updateStarterHint();
-      $('#restart').textContent = '↻ Next Match';
-      playSound(result.winner === 'draw' ? 'draw' : mode.value === 'computer' && result.winner === computerSide() ? 'lose' : 'win');
-      currentScores()[result.winner]++;
-      status.textContent = result.winner === 'draw' ? `Draw! ${result.reason}` : `${playerName(result.winner)} wins! ${result.reason}`;
+      gameOver=true;completed[config.game]++;currentScores()[result.winner]++;
+      cancelComputer();updateStarterHint();
+      playSound(result.winner==='draw'?'draw':config.mode==='computer'&&result.winner===computerSide()?'lose':'win');
+      $('#status').textContent=result.winner==='draw'?`Draw! ${result.reason}`:`${ownerName(result.winner)} wins! ${result.reason}`;
     }
-    function commitMove(move, fromComputer = false) {
-      const computerTurn = isComputerTurn();
-      if (!active || gameOver || computerTurn !== fromComputer || !move) return;
-      if (!legalMoves(board, currentPlayer).some(m => m.from === move.from && m.to === move.to)) return;
-      movementTurns++;
-      board = applyMove(board, move, currentPlayer);
-      selected = null;
-      currentPlayer = other(currentPlayer);
-      const key = stateKey(board, currentPlayer);
-      history.set(key, (history.get(key) || 0) + 1);
-      const result = outcome(board, currentPlayer, history, movementTurns);
-      if (result) finish(result);
-      else playSound('move');
-      render();
-      scheduleComputer();
-    }
-    function scheduleComputer() {
-      if (!active || gameOver || !isComputerTurn() || computerTimer !== null) return;
-      computerTimer = setTimeout(() => {
-        computerTimer = null;
-        if (active && !gameOver && isComputerTurn()) commitMove(chooseComputerMove(board, difficulty.value), true);
-      }, 250);
+    function commitStep(move,fromComputer=false) {
+      if (!active||gameOver||isComputerTurn()!==fromComputer||!move) return false;
+      const legal=rules.moves(config.game,board,turn,forced);
+      const step=legal.find(m=>m.from===move.from&&m.to===move.to&&m.captured===move.captured);
+      if (!step) return false;
+      board=rules.apply(board,step,turn);lastMove=step.to;lastCaptured=step.captured;
+      captureInTurn ||= step.captured!==null;
+      if (step.captured!==null && rules.captures(config.game,board,turn,step.to).length) {
+        forced=step.to;selected=step.to;playSound('capture');render();scheduleComputer();return true;
+      }
+      forced=null;selected=null;turn=rules.other(turn);turnNumber++;
+      quiet=captureInTurn?0:quiet+1;captureInTurn=false;aiPlan=[];
+      const key=rules.key(board,turn);history.set(key,(history.get(key)||0)+1);
+      const result=rules.outcome(config.game,board,turn,history,quiet);
+      if (result) finish(result);else playSound(step.captured===null?'move':'capture');
+      render();scheduleComputer();return true;
     }
     function makeMove(index) {
-      if (!active || gameOver || isComputerTurn()) return;
-      if (board[index] === currentPlayer) {
-        selected = selected === index ? null : index;
-        render();
-      } else commitMove({ from: selected, to: index });
+      if (!active||gameOver||isComputerTurn()) return;
+      const legal=rules.moves(config.game,board,turn,forced);
+      if (legal.some(m=>m.from===index)) {
+        if (forced===null) selected=selected===index?null:index;
+        render();return;
+      }
+      const move=legal.find(m=>m.from===selected&&m.to===index);
+      if (move) commitStep(move);
     }
-    function cancelComputer() { clearTimeout(computerTimer); computerTimer = null; }
+    function disposeWorker() {
+      if (aiWorker) aiWorker.terminate();aiWorker=null;
+      if (aiURL) URL.revokeObjectURL(aiURL);aiURL=null;
+    }
+    function cancelComputer() { aiVersion++;clearTimeout(aiTimer);aiTimer=null;disposeWorker();aiPlan=[]; }
+    function scheduleComputer() {
+      if (!active||gameOver||!isComputerTurn()||aiTimer!==null||aiWorker) return;
+      const version=aiVersion;
+      aiTimer=setTimeout(()=>{
+        aiTimer=null;if (version!==aiVersion||!active||gameOver||!isComputerTurn()) return;
+        if (aiPlan.length) { if (!commitStep(aiPlan.shift(),true)) { aiPlan=[];scheduleComputer(); } return; }
+        const job={game:config.game,board:board.slice(),turn,forced,level:config.level,history:[...history],quiet,budget:config.level==='hard'?140:65};
+        const accept=steps=>{
+          if (version!==aiVersion||!active||gameOver||!isComputerTurn()) return;
+          disposeWorker();aiPlan=steps||[];
+          if (!aiPlan.length) { const result=rules.outcome(config.game,board,turn,history,quiet);if(result){finish(result);render();}return; }
+          if (!commitStep(aiPlan.shift(),true)) {aiPlan=[];scheduleComputer();}
+        };
+        const fallback=()=>{if(version!==aiVersion)return;disposeWorker();accept(chooseAI(rules,{...job,budget:20}));};
+        try {
+          if (typeof Worker==='undefined') {fallback();return;}
+          const source=`const rules=(${createRules.toString()})();const chooseAI=${chooseAI.toString()};onmessage=e=>postMessage(chooseAI(rules,e.data));`;
+          aiURL=URL.createObjectURL(new Blob([source],{type:'text/javascript'}));aiWorker=new Worker(aiURL);
+          aiWorker.onmessage=event=>accept(event.data);aiWorker.onerror=fallback;aiWorker.postMessage(job);
+        } catch {fallback();}
+      },240);
+    }
     function restartGame() {
-      cancelComputer();
-      board = STARTING_BOARD.slice();
-      matchNumber = completedMatches + 1;
-      currentPlayer = completedMatches % 2 === 0 ? humanSide : other(humanSide);
-      gameOver = false;
-      $('#restart').textContent = '↻ Restart';
-      updateStarterHint();
-      selected = null; movementTurns = 0;
-      history = new Map([[stateKey(board, currentPlayer), 1]]);
-      difficulty.disabled = mode.value === 'pvp';
-      updatePlayerNames();
-      render();
-      scheduleComputer();
+      cancelComputer();board=rules.initial(config.game);turn=completed[config.game]%2===0?config.side:rules.other(config.side);
+      gameOver=false;forced=null;selected=null;quiet=0;turnNumber=0;captureInTurn=false;lastMove=null;lastCaptured=null;
+      history=new Map([[rules.key(board,turn),1]]);updateStarterHint();render();scheduleComputer();
+    }
+    function playGame() {
+      cancelComputer();config={game:$('#game').value,mode:$('#mode').value,level:$('#difficulty').value,side:$('#side').value};
+      applyPalette();savePreferences();active=true;
+      $('#setup-screen').hidden=true;$('#game-screen').hidden=false;
+      $('#game-title').textContent=titles[config.game];document.title=titles[config.game]+' — Woodland Classics';
+      $('#game-rules').textContent=config.game==='morris'?
+        'Start with three pieces on the top row and three on the bottom row. No placement or captures. Move to a directly connected adjacent empty point. Only the middle row (3,4,5), middle column (1,4,7), and diagonals (0,4,8) and (2,4,6) win. Outer lines never win. A blocked player loses. The same board and turn three times, or 100 moves, draw. Player 1 starts match 1; starters alternate only after completed matches. Restarting an unfinished match does not advance the sequence.':
+        'This reference board has 25 intersections: all horizontal/vertical links and diagonals only at alternating intersections. Twelve pieces per side; only the center starts empty. Move to a connected adjacent empty point. If any capture is available, you must capture: jump over one adjacent opponent along two straight connected segments into the empty point beyond. Remove it immediately. Continue all available jumps with that same piece, changing direction if needed. You may choose any capture branch; longest capture is not required. Win when the opponent has no pieces or legal moves. Three repeated board-and-turn states or 100 turns without a capture draw. Completed matches alternate the starter.';
+      drawBoard();restartGame();$('#back-setup').focus();void unlockAudio();
+    }
+    function backToSetup() {
+      cancelComputer();active=false;selected=null;forced=null;
+      $('#game-screen').hidden=true;$('#setup-screen').hidden=false;
+      document.title='Woodland Classics — Traditional Strategy Games';updateStarterHint();render();$('#setup-title').focus();
     }
     let audioContext = null, effectsGain = null, musicGain = null;
     let soundEnabled = true, musicEnabled = false, musicTimer = null, musicStep = 0;
@@ -367,7 +508,7 @@
     function playSound(kind) {
       // Never create or resume a context from a computer timer or page load.
       if (!soundEnabled || !audioContext || audioContext.state !== 'running' || document.hidden) return;
-      const notes = { click: [440], move: [330, 495], win: [523,659,784,1047], lose: [392,330,262], draw: [392,440,392] };
+      const notes = { click: [440], move: [330, 495], capture: [220,440,660], win: [523,659,784,1047], lose: [392,330,262], draw: [392,440,392] };
       (notes[kind] || notes.click).forEach((frequency, i) =>
         tone(frequency, audioContext.currentTime + i * 0.11, kind === 'click' ? 0.07 : 0.18, effectsGain, kind === 'move' ? 'triangle' : 'sine'));
     }
@@ -400,37 +541,22 @@
       if (effectsGain) effectsGain.gain.setValueAtTime(soundEnabled ? 0.18 : 0, audioContext.currentTime);
       syncMusic();
     }
-    async function setSound(enabled) { soundEnabled = enabled; updateAudioControls(); await unlockAudio(); }
-    async function setMusic(enabled) { musicEnabled = enabled; updateAudioControls(); await unlockAudio(); }
+    async function setSound(enabled) { soundEnabled = enabled; updateAudioControls(); savePreferences(); await unlockAudio(); }
+    async function setMusic(enabled) { musicEnabled = enabled; updateAudioControls(); savePreferences(); await unlockAudio(); }
     $('#sound-toggle').addEventListener('click', () => setSound(!soundEnabled));
     $('#music-toggle').addEventListener('click', () => setMusic(!musicEnabled));
     $('#setup-sound').addEventListener('change', () => setSound($('#setup-sound').checked));
     $('#setup-music').addEventListener('change', () => setMusic($('#setup-music').checked));
-    function playGame() {
-      cancelComputer();
-      humanSide = $('#side').value;
-      applyPalette(); active = true;
-      $('#setup-screen').hidden = true; $('#game-screen').hidden = false;
-      restartGame(); $('#back-setup').focus();
-      void unlockAudio();
-    }
-    function backToSetup() {
-      cancelComputer(); active = false; selected = null;
-      $('#game-screen').hidden = true; $('#setup-screen').hidden = false;
-      render(); $('#setup-title').focus();
-    }
-    $('#play-game').addEventListener('click', playGame);
-    $('#back-setup').addEventListener('click', backToSetup);
-    $('#colors').addEventListener('change', applyPalette);
-    cells.forEach((cell, i) => cell.addEventListener('click', () => makeMove(i)));
-    $('#restart').addEventListener('click', restartGame);
-    mode.addEventListener('change', () => { difficulty.disabled = mode.value === 'pvp'; });
-    $('#reset-scores').addEventListener('click', () => {
-      scores[scoreKey()] = { X: 0, O: 0, draw: 0 }; updateScores();
-    });
-    applyPalette();
-    updateAudioControls();
-    restartGame();
+    $('#play-game').addEventListener('click',playGame);
+    $('#back-setup').addEventListener('click',backToSetup);
+    $('#restart').addEventListener('click',restartGame);
+    $('#next-match').addEventListener('click',()=>{if(gameOver)restartGame();});
+    for (const id of ['game','mode','difficulty','colors','side']) $('#'+id).addEventListener('change',setupChanged);
+    $('#reset-scores').addEventListener('click',()=>{scores[scoreKey()]={X:0,O:0,draw:0};render();});
+    loadPreferences();buildPaletteChoices();applyPalette();updateAudioControls();
+    $('#difficulty-field').hidden=$('#mode').value!=='computer';
+    $('#difficulty').disabled=$('#mode').value!=='computer';
+    drawBoard();restartGame();
   </script>
 </body>
 </html>
