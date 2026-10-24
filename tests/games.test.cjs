@@ -104,8 +104,8 @@ test('Full matches at every difficulty, both games and both computer sides remai
 });
 
 // Small DOM/audio/worker fakes exercise the actual inline application, not a copy.
-function browserHarness({preferences=null,results=null,storageBlocked=false,worker=false,audio=true}={}) {
-  const timers=new Map(),intervals=new Map(),elements={},documentEvents={},workerEvents=[],urls=new Map(),notes=[];
+function browserHarness({preferences=null,results=null,storageBlocked=false,worker=false,audio=true,autoplay='allowed',keepAudioClock=false,sessionPlayed=false}={}) {
+  const timers=new Map(),intervals=new Map(),elements={},documentEvents={},windowEvents={},workerEvents=[],urls=new Map(),notes=[],oscillators=[],automations=[],audioContexts=[];let interacted=false;
   let serial=0,contexts=0;const stored={};
   if(preferences)stored['woodland-classics-preferences-v1']=JSON.stringify(preferences);
   if(results)stored['woodland-classics-results-v1']=JSON.stringify(results);
@@ -122,11 +122,15 @@ function browserHarness({preferences=null,results=null,storageBlocked=false,work
     querySelectorAll:s=>s==='.palette-choice'?get('#palette-options').children:[],addEventListener(k,fn){(documentEvents[k] ||= []).push(fn)}};
   for(const [id,value] of [['game','morris'],['mode','pvp'],['difficulty','easy'],['colors','redblue'],['side','X']])get('#'+id).value=value;
   for(const id of ['setup-screen','game-screen','audio-note'])if(new RegExp('id=\"'+id+'\" hidden').test(html))get('#'+id).hidden=true;
+  const param=(initial=0)=>({value:initial,setValueAtTime(v,t){this.value=v;automations.push(['set',v,t]);},linearRampToValueAtTime(v,t){this.value=v;automations.push(['linear',v,t]);},exponentialRampToValueAtTime(v,t){this.value=v;automations.push(['exponential',v,t]);},cancelScheduledValues(){},cancelAndHoldAtTime(){}});
+  const session=new Map(sessionPlayed?[['woodland-welcome-v1','played']]:[]);
   class AudioContext {
-    constructor(){contexts++;this.state='suspended';this.currentTime=1;this.destination={};}
-    resume(){this.state='running';return Promise.resolve();}
-    createGain(){return {gain:{value:0,setValueAtTime(v){this.value=v},linearRampToValueAtTime(){},exponentialRampToValueAtTime(){}},connect(){},disconnect(){}};}
-    createOscillator(){return {frequency:{value:0},connect(){},disconnect(){},start(){notes.push(this.frequency.value)},stop(){}};}
+    constructor(){contexts++;this.state=autoplay==='allowed'?'running':'suspended';this.currentTime=1;this.destination={};audioContexts.push(this);}
+    resume(){if(autoplay==='blocked'&&!interacted)return Promise.reject(Error('NotAllowedError'));this.state='running';return Promise.resolve();}
+    close(){this.state='closed';return Promise.resolve();}
+    createGain(){return {gain:param(),connect(){},disconnect(){}};}
+    createDynamicsCompressor(){return {threshold:param(),knee:param(),ratio:param(),attack:param(),release:param(),connect(){},disconnect(){}};}
+    createOscillator(){const o={frequency:param(),connect(){},disconnect(){},start(t){this.startTime=t;notes.push(this.frequency.value);},stop(t){this.stopTime=t;}};oscillators.push(o);return o;}
   }
   class Blob {constructor(parts){this.source=parts.join('');}}
   class Worker {
@@ -138,19 +142,20 @@ function browserHarness({preferences=null,results=null,storageBlocked=false,work
     terminate(){this.terminated=true;}
   }
   const localStorage={getItem(k){if(storageBlocked)throw Error('blocked');return stored[k]||null;},setItem(k,v){if(storageBlocked)throw Error('blocked');stored[k]=v;}};
-  const c=vm.createContext({document,window:audio?{AudioContext}:{},localStorage,performance,
+  const c=vm.createContext({document,window:{...(audio?{AudioContext}:{}),addEventListener(k,fn){windowEvents[k]=fn}},sessionStorage:{getItem:k=>session.get(k)||null,setItem:(k,v)=>session.set(k,v)},localStorage,performance,
     setTimeout:fn=>{timers.set(++serial,fn);return serial},clearTimeout:id=>timers.delete(id),
     setInterval:fn=>{intervals.set(++serial,fn);return serial},clearInterval:id=>intervals.delete(id),
     ...(worker?{Worker,Blob,URL:{createObjectURL(blob){const url='blob:'+ ++serial;urls.set(url,blob);return url},revokeObjectURL(url){urls.delete(url)}}}:{})});
   vm.runInContext(source,c);
+  if(!keepAudioClock&&audioContexts.length)audioContexts[0].currentTime=10;
   const run=s=>vm.runInContext(s,c),call=(fn,...args)=>{c.args=args;return run(`${fn}(...args)`)};
   const flush=()=>{const entry=timers.entries().next().value;assert(entry,'Pending timer expected');timers.delete(entry[0]);entry[1]();};
-  return {c,run,call,get,document,documentEvents,timers,intervals,workerEvents,urls,notes,flush,stored:()=>stored['woodland-classics-preferences-v1'],results:()=>JSON.parse(stored['woodland-classics-results-v1']||'null'),contexts:()=>contexts};
+  return {c,run,call,get,document,documentEvents,windowEvents,timers,intervals,workerEvents,urls,notes,oscillators,automations,audioContexts,session,interact(){interacted=true;},flush,stored:()=>stored['woodland-classics-preferences-v1'],results:()=>JSON.parse(stored['woodland-classics-results-v1']||'null'),contexts:()=>contexts};
 }
 test('Setup, six previews, English-only interface and safe local preferences',async()=>{
   assert(!/[\u0980-\u09ff]/.test(html),'No Bengali text anywhere in the page');
   const t=browserHarness({preferences:{game:'twelve',mode:'computer',level:'hard',palette:'orangesky',side:'O',sound:false,music:true}});
-  assert.equal(t.run('active'),false);assert.equal(t.contexts(),0);
+  assert.equal(t.run('active'),false);assert.equal(t.contexts(),1);
   assert.equal(t.get('#game').value,'twelve');assert.equal(t.get('#colors').value,'orangesky');assert.equal(t.get('#palette-options').children.length,6);
   assert.equal(t.get('#difficulty-field').hidden,false);assert.equal(t.run('musicEnabled'),true);assert.equal(t.run('soundEnabled'),false);
   for(const key of t.run('Object.keys(palettes)')){
@@ -219,8 +224,8 @@ test('AI Worker cancellation/fallback and strict search budgets remain responsiv
   const fallback=chooseAI(rules,{game:'twelve',board:put([0],[1,7,13]),turn:'X',level:'hard',budget:0});assert.equal(fallback.length,3,'Even an expired search must produce a complete legal chain');
 });
 test('Audio effects, distinct capture sound, independent sound/music, mobile unlock and saved settings',async()=>{
-  const t=browserHarness();assert.equal(t.contexts(),0);t.documentEvents.pointerdown[0]();await Promise.resolve();assert.equal(t.contexts(),1);
-  const before=t.notes.length;t.call('playSound','capture');assert.deepEqual(t.notes.slice(before),[220,440,660]);
+  const t=browserHarness();assert.equal(t.contexts(),1);await t.call('setMusic',false);t.documentEvents.pointerdown[0]();await Promise.resolve();assert.equal(t.contexts(),1);
+  const before=t.notes.length;t.call('playSound','capture');assert.equal(t.notes.slice(before).length,3);
   await t.get('#music-toggle').events.click();assert.equal(t.intervals.size,1);assert.equal(t.get('#setup-music').checked,true);
   await t.get('#sound-toggle').events.click();assert.equal(t.run('soundEnabled'),false);assert.equal(t.intervals.size,1);assert.equal(JSON.parse(t.stored()).sound,false);
   const muted=t.notes.length;t.call('playSound','move');assert.equal(t.notes.length,muted);
@@ -249,7 +254,7 @@ test('Three distinct screens: selection has exactly two cards, no settings, and 
     t.get('#back-setup').events.click();assert.equal(t.get('#setup-screen').hidden,false);assert.equal(t.get('#game-screen').hidden,true);
     t.get('#back-selection').events.click();assert.equal(t.get('#selection-screen').hidden,false);assert.equal(t.get('#setup-screen').hidden,true);assert.equal(t.get('#audio-note').hidden,true);
   }
-  assert.equal(t.contexts(),1); // Only Play (a user action) unlocked audio.
+  assert.equal(t.contexts(),1); // One shared context serves autoplay and all screen interactions.
 });
 test('All game/mode/difficulty/color/side setups keep selected colors, legal first turns and no stale computation',()=>{
   const t=browserHarness({worker:true});let combinations=0;
@@ -289,4 +294,77 @@ test('Both games share a 9%-of-board visible piece scale while full cells remain
   const t=browserHarness();t.call('selectGame','twelve');t.call('playGame');t.c.fixture=put([0,20],[1,7,13,21]);t.run("board=fixture.slice();turn='X';render()");t.call('makeMove',0);t.call('makeMove',2);
   assert.equal(t.run('board[1]'),'');assert(t.get('#board').children[1].innerHTML.includes('token o capture-ghost'));
   assert(html.includes('@keyframes captured-piece'));assert(html.includes('animation: none !important'));
+});
+
+test('Selection stays in two bounded columns at 320/375/430px; desktop remains centered',()=>{
+  const css=html.match(/<style>([\s\S]*?)<\/style>/)[1];
+  const mobile=css.match(/@media\(max-width: 640px\) \{([\s\S]*?)\n    \}/)[1];
+  assert(mobile.includes('grid-template-columns: repeat(2,minmax(0,1fr))'));
+  assert(!mobile.includes('grid-template-columns: 1fr;'));
+  for(const width of [320,375,430]){
+    const available=width-24,gap=Math.min(16,Math.max(8,width*.025)),card=(available-gap)/2;
+    const padding=Math.min(14,Math.max(7,width*.02)),inside=card-4-2*padding;
+    assert(card*2+gap<=available+.001);assert(inside>=120);assert(mobile.includes('min-width: 0'));assert(mobile.includes('width: 100%'));
+  }
+  assert(css.includes('main { max-width: 940px; margin: auto; }'));
+  // All declarations in the new mobile override are scoped to selection.
+  for(const selector of mobile.matchAll(/([^{}]+)\{/g))assert(selector[1].trim().startsWith('#selection-screen'));
+});
+test('Autoplay-allowed welcome is 2–3 seconds, claims the session before concurrent resumes and precedes music',async()=>{
+  const t=browserHarness({keepAudioClock:true});
+  assert.equal(t.run('welcomePlayed'),true);assert.equal(t.session.get('woodland-welcome-v1'),'played');assert.equal(t.notes.length,8);
+  const span=Math.max(...t.oscillators.map(o=>o.stopTime))-Math.min(...t.oscillators.map(o=>o.startTime));assert(span>=2&&span<=3);
+  assert(t.run('nextBeatTime>welcomeEnd'));assert.equal(t.intervals.size,1);
+  const initial=t.notes.length;await Promise.all([t.call('unlockAudio'),t.call('unlockAudio'),t.call('unlockAudio')]);assert.equal(t.notes.length,initial);
+  t.call('selectGame','morris');t.call('playGame');t.call('backToSetup');t.call('backToSelection');assert.equal(t.notes.length,initial,'No overlapping welcome or effects over opening');
+  const returning=browserHarness({sessionPlayed:true,keepAudioClock:true});assert.equal(returning.run('voices.welcome.size'),0);assert.equal(returning.run('welcomePlayed'),true);
+});
+test('Autoplay denial retries on the first interaction, without audio failure or duplicate welcome',async()=>{
+  const t=browserHarness({autoplay:'blocked',keepAudioClock:true});await Promise.resolve();
+  assert.equal(t.run('welcomePlayed'),false);assert.equal(t.notes.length,0);assert.equal(t.intervals.size,0);assert.equal(t.run('audioUnavailable'),false);
+  t.interact();t.documentEvents.pointerdown[0]();await t.call('unlockAudio');
+  assert.equal(t.run('welcomePlayed'),true);assert.equal(t.notes.length,8);assert.equal(t.intervals.size,1);
+  await t.call('unlockAudio');assert.equal(t.notes.length,8);
+  const silent=browserHarness({preferences:{sound:false,music:false},keepAudioClock:true});assert.equal(silent.contexts(),0);assert.equal(silent.notes.length,0);silent.interact();silent.documentEvents.pointerdown[0]();await Promise.resolve();assert.equal(silent.notes.length,0);
+  const noMusic=browserHarness({preferences:{sound:true,music:false},keepAudioClock:true});assert.equal(noMusic.notes.length,8);assert.equal(noMusic.intervals.size,0);
+  const musicOnly=browserHarness({preferences:{sound:false,music:true},keepAudioClock:true});assert.equal(musicOnly.run('voices.welcome.size'),0);assert.equal(musicOnly.intervals.size,1);
+});
+test('Original music schedules a seamless loop at 18%, fades, ducks and survives all screens without restarting',async()=>{
+  const t=browserHarness({sessionPlayed:true,keepAudioClock:true});const timer=[...t.intervals.keys()][0],context=t.audioContexts[0];
+  assert.equal(t.run('musicVolume'),.18);assert(t.automations.some(([kind,v])=>kind==='linear'&&v===.18));
+  const step=t.run('musicStep');
+  t.call('selectGame','morris');t.call('playGame');t.call('backToSetup');t.call('backToSelection');t.call('selectGame','twelve');t.call('playGame');await Promise.resolve();
+  assert.equal([...t.intervals.keys()][0],timer);assert.equal(t.run('musicStep'),step);assert.equal(t.contexts(),1);
+  let last=t.run('nextBeatTime');for(let i=0;i<40;i++){
+    context.currentTime=t.run('nextBeatTime')-.1;t.intervals.get(timer)();assert(t.run('nextBeatTime')>last);last=t.run('nextBeatTime');
+  }
+  const count=t.notes.length;t.intervals.get(timer)();assert.equal(t.notes.length,count,'No duplicate look-ahead scheduling');
+  t.call('playSound','win');assert(t.automations.some(([kind,v])=>kind==='linear'&&v===.09));
+  await t.call('setMusic',false);assert.equal(t.intervals.size,0);assert(t.automations.some(([kind,v])=>kind==='linear'&&v===0));assert.equal(JSON.parse(t.stored()).music,false);
+  await t.call('setMusic',true);assert.equal(t.intervals.size,1);
+});
+test('Polished effects cover cards, buttons, selection, moves, invalid attempts, every jump and results',()=>{
+  const t=browserHarness({sessionPlayed:true});t.call('selectGame','twelve');t.call('playGame');const ctx=t.audioContexts[0];
+  for(const kind of ['card','click','select','move','invalid','newmatch','win','lose','draw']){
+    ctx.currentTime+=1;const count=t.notes.length;t.call('playSound',kind);assert(t.notes.length>count,kind);
+  }
+  t.c.fixture=put([0],[1,7,13]);t.run("cancelComputer();config.mode='pvp';board=fixture.slice();turn='X';gameOver=false;forced=null;history=new Map();render()");
+  for(const [from,to,captured] of [[0,2,1],[2,12,7],[12,14,13]]){
+    ctx.currentTime+=.25;const count=t.notes.length;t.call('commitStep',move(from,to,captured));assert(t.notes.length>=count+3,'Every jump creates its capture accent');
+  }
+  assert.equal(t.run('gameOver'),true);
+  const lastCapture=t.oscillators.slice(-7,-4),win=t.oscillators.slice(-4);assert(win[0].startTime>lastCapture[0].startTime+.12,'Victory follows the final capture');
+  ctx.currentTime+=1;t.call('playSound','invalid');const count=t.notes.length;t.call('playSound','invalid');assert.equal(t.notes.length,count,'Repeated warnings are throttled');
+  // A hardware voice failure cannot abort a legal game action.
+  ctx.createOscillator=()=>{throw Error('hardware failure')};t.call('restartGame');assert.equal(t.run('board.filter(Boolean).length'),24);
+});
+test('Visibility, OS audio interruption and page cleanup stop resources and resume music without replaying welcome',async()=>{
+  const t=browserHarness({sessionPlayed:true});const ctx=t.audioContexts[0];
+  t.document.hidden=true;t.documentEvents.visibilitychange[0]();assert.equal(t.intervals.size,0);
+  t.document.hidden=false;t.documentEvents.visibilitychange[0]();await Promise.resolve();assert.equal(t.intervals.size,1);
+  const step=t.run('musicStep');ctx.state='interrupted';ctx.onstatechange();assert.equal(t.intervals.size,0);
+  ctx.state='running';ctx.onstatechange();assert.equal(t.intervals.size,1);assert(t.run('musicStep')>=step);
+  assert.equal(t.run('voices.welcome.size'),0);
+  t.windowEvents.pagehide();assert.equal(t.intervals.size,0);assert.equal(ctx.state,'closed');assert.equal(t.run('audioContext'),null);assert.equal(t.run('voices.music.size+voices.effects.size+voices.welcome.size'),0);
+  t.windowEvents.pageshow();await Promise.resolve();assert.equal(t.contexts(),2);assert.equal(t.run('voices.welcome.size'),0);
 });
