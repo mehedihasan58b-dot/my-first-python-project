@@ -104,9 +104,11 @@ test('Full matches at every difficulty, both games and both computer sides remai
 });
 
 // Small DOM/audio/worker fakes exercise the actual inline application, not a copy.
-function browserHarness({preferences=null,storageBlocked=false,worker=false,audio=true}={}) {
+function browserHarness({preferences=null,results=null,storageBlocked=false,worker=false,audio=true}={}) {
   const timers=new Map(),intervals=new Map(),elements={},documentEvents={},workerEvents=[],urls=new Map(),notes=[];
-  let serial=0,stored=preferences?JSON.stringify(preferences):null,contexts=0;
+  let serial=0,contexts=0;const stored={};
+  if(preferences)stored['woodland-classics-preferences-v1']=JSON.stringify(preferences);
+  if(results)stored['woodland-classics-results-v1']=JSON.stringify(results);
   function element() {
     const classes=new Set();let content='';
     return {value:'',checked:false,hidden:false,disabled:false,children:[],dataset:{},events:{},attributes:{},style:{values:{},setProperty(k,v){this.values[k]=v}},
@@ -119,6 +121,7 @@ function browserHarness({preferences=null,storageBlocked=false,worker=false,audi
   const document={hidden:false,title:'',documentElement:element(),querySelector:get,createElement:element,
     querySelectorAll:s=>s==='.palette-choice'?get('#palette-options').children:[],addEventListener(k,fn){(documentEvents[k] ||= []).push(fn)}};
   for(const [id,value] of [['game','morris'],['mode','pvp'],['difficulty','easy'],['colors','redblue'],['side','X']])get('#'+id).value=value;
+  for(const id of ['setup-screen','game-screen','audio-note'])if(new RegExp('id=\"'+id+'\" hidden').test(html))get('#'+id).hidden=true;
   class AudioContext {
     constructor(){contexts++;this.state='suspended';this.currentTime=1;this.destination={};}
     resume(){this.state='running';return Promise.resolve();}
@@ -134,7 +137,7 @@ function browserHarness({preferences=null,storageBlocked=false,worker=false,audi
     }
     terminate(){this.terminated=true;}
   }
-  const localStorage={getItem(){if(storageBlocked)throw Error('blocked');return stored;},setItem(k,v){if(storageBlocked)throw Error('blocked');stored=v;}};
+  const localStorage={getItem(k){if(storageBlocked)throw Error('blocked');return stored[k]||null;},setItem(k,v){if(storageBlocked)throw Error('blocked');stored[k]=v;}};
   const c=vm.createContext({document,window:audio?{AudioContext}:{},localStorage,performance,
     setTimeout:fn=>{timers.set(++serial,fn);return serial},clearTimeout:id=>timers.delete(id),
     setInterval:fn=>{intervals.set(++serial,fn);return serial},clearInterval:id=>intervals.delete(id),
@@ -142,7 +145,7 @@ function browserHarness({preferences=null,storageBlocked=false,worker=false,audi
   vm.runInContext(source,c);
   const run=s=>vm.runInContext(s,c),call=(fn,...args)=>{c.args=args;return run(`${fn}(...args)`)};
   const flush=()=>{const entry=timers.entries().next().value;assert(entry,'Pending timer expected');timers.delete(entry[0]);entry[1]();};
-  return {c,run,call,get,document,documentEvents,timers,intervals,workerEvents,urls,notes,flush,stored:()=>stored,contexts:()=>contexts};
+  return {c,run,call,get,document,documentEvents,timers,intervals,workerEvents,urls,notes,flush,stored:()=>stored['woodland-classics-preferences-v1'],results:()=>JSON.parse(stored['woodland-classics-results-v1']||'null'),contexts:()=>contexts};
 }
 test('Setup, six previews, English-only interface and safe local preferences',async()=>{
   assert(!/[\u0980-\u09ff]/.test(html),'No Bengali text anywhere in the page');
@@ -225,4 +228,65 @@ test('Audio effects, distinct capture sound, independent sound/music, mobile unl
   t.document.hidden=false;t.documentEvents.visibilitychange[0]();assert.equal(t.intervals.size,1);
   await t.get('#music-toggle').events.click();assert.equal(t.intervals.size,0);
   const unsupported=browserHarness({audio:false});unsupported.documentEvents.keydown[0]();await Promise.resolve();assert(unsupported.get('#audio-note').textContent.includes('unavailable'));unsupported.call('playGame');assert.equal(unsupported.run('active'),true);
+});
+
+test('Three distinct screens: selection has exactly two cards, no settings, and accurate engine-built previews',()=>{
+  const t=browserHarness();
+  assert.equal(t.get('#selection-screen').hidden,false);assert.equal(t.get('#setup-screen').hidden,true);assert.equal(t.get('#game-screen').hidden,true);assert.equal(t.get('#audio-note').hidden,true);
+  const selection=html.slice(html.indexOf('<section id="selection-screen"'),html.indexOf('<section id="setup-screen"'));
+  assert.equal((selection.match(/<button /g)||[]).length,2);assert(!/<select|<input/.test(selection));
+  for(const game of ['morris','twelve']){
+    const preview=t.get('#preview-'+game).innerHTML;
+    const path=preview.match(/<path d="([^"]*)"/)[1];
+    assert.equal((path.match(/M/g)||[]).length,rules.graphs[game].reduce((n,links)=>n+links.length,0)/2);
+    assert.equal((preview.match(/<use href="#petal-flower"/g)||[]).length,game==='morris'?6:24);
+    t.get('#select-'+game).events.click();
+    assert.equal(t.get('#selection-screen').hidden,true);assert.equal(t.get('#setup-screen').hidden,false);assert.equal(t.get('#game-screen').hidden,true);
+    assert.equal(t.get('#game').value,game);assert.equal(t.get('#setup-game-title').textContent,game==='morris'?"Three Men's Morris":'Twelve Guti');
+    assert.equal(t.get('#select-'+game).attributes['aria-pressed'],'true');
+    t.get('#play-game').events.click();assert.equal(t.get('#setup-screen').hidden,true);assert.equal(t.get('#game-screen').hidden,false);
+    assert.equal(t.get('#board').children.length,game==='morris'?9:25);
+    t.get('#back-setup').events.click();assert.equal(t.get('#setup-screen').hidden,false);assert.equal(t.get('#game-screen').hidden,true);
+    t.get('#back-selection').events.click();assert.equal(t.get('#selection-screen').hidden,false);assert.equal(t.get('#setup-screen').hidden,true);assert.equal(t.get('#audio-note').hidden,true);
+  }
+  assert.equal(t.contexts(),1); // Only Play (a user action) unlocked audio.
+});
+test('All game/mode/difficulty/color/side setups keep selected colors, legal first turns and no stale computation',()=>{
+  const t=browserHarness({worker:true});let combinations=0;
+  for(const game of ['morris','twelve'])for(const mode of ['pvp','computer'])for(const level of ['easy','medium','hard'])for(const color of ['redblue','greengold','blackwhite','purplesilver','browncream','orangesky'])for(const side of ['X','O']){
+    t.call('selectGame',game);t.get('#mode').value=mode;t.get('#difficulty').value=level;t.get('#colors').value=color;t.get('#side').value=side;t.call('setupChanged');
+    assert.equal(t.get('#difficulty-field').hidden,mode==='pvp');t.call('playGame');
+    assert.equal(t.run('config.game'),game);assert.equal(t.run('currentPalette'),color);assert.equal(t.run('turn'),side);
+    const colors=t.run('palettes[currentPalette].values');assert.notEqual(colors[0],colors[3]);
+    assert.deepEqual(plain(t.run('board')),plain(rules.initial(game)));assert.equal(t.timers.size,0);
+    // Completing one round makes Player 2/the computer start; all screens can still cancel it.
+    t.call('finish',{winner:'draw',reason:'fixture'});t.call('restartGame');assert.equal(t.run('turn'),rules.other(side));
+    if(mode==='computer'){assert.equal(t.timers.size,1);t.flush();const callback=t.workerEvents.shift();assert(callback);t.call('backToSetup');t.call('backToSelection');const before=t.run('JSON.stringify(board)');callback();assert.equal(t.run('JSON.stringify(board)'),before);}
+    else {t.call('backToSetup');t.call('backToSelection');}
+    // Isolate each setup combination while still testing the actual turn/score lifecycle.
+    t.run(`completed.${game}=0`);combinations++;
+  }
+  assert.equal(combinations,144);assert.equal(t.urls.size,0);
+});
+test('Scores and starter sequences survive reload, remain per-game, validate corrupt data and reset safely',()=>{
+  const t=browserHarness();t.call('selectGame','morris');t.call('playGame');t.call('finish',{winner:'X',reason:'test'});
+  t.call('backToSetup');t.call('backToSelection');t.call('selectGame','twelve');t.call('playGame');t.call('finish',{winner:'draw',reason:'test'});
+  const reloaded=browserHarness({preferences:JSON.parse(t.stored()),results:t.results()});
+  assert.equal(reloaded.get('#selection-screen').hidden,false);assert.equal(reloaded.get('#setup-screen').hidden,true);
+  reloaded.call('selectGame','morris');reloaded.call('playGame');assert.equal(reloaded.run('currentScores().X'),1);assert.equal(reloaded.run('turn'),'O');
+  reloaded.call('restartGame');assert.equal(reloaded.run('completed.morris'),1);assert.equal(reloaded.run('turn'),'O');
+  reloaded.get('#reset-scores').events.click();assert.equal(reloaded.run('currentScores().X'),0);assert.equal(reloaded.results().completed.morris,1);assert.equal(reloaded.results().scores['morris:pvp::X'].X,0);
+  reloaded.call('backToSetup');reloaded.call('selectGame','twelve');reloaded.call('playGame');assert.equal(reloaded.run('currentScores().draw'),1);
+  const corrupt=browserHarness({results:{completed:{morris:-1,twelve:'bad'},scores:{'morris:pvp::X':{X:-1,O:0,draw:0},'__proto__':{X:5,O:5,draw:5},'twelve:computer:easy:O':{X:2,O:3,draw:1}}}});
+  assert.equal(corrupt.run('completed.morris'),0);assert.equal(corrupt.run('Object.keys(scores).length'),2); // valid Twelve record plus initialized Morris score
+  const blocked=browserHarness({storageBlocked:true});blocked.call('selectGame','twelve');blocked.call('playGame');blocked.call('finish',{winner:'draw',reason:'test'});assert.equal(blocked.run('completed.twelve'),1);
+});
+test('Both games share a 9%-of-board visible piece scale while full cells remain touch targets; capture ghosts fade',()=>{
+  assert(html.includes('width: calc(var(--board-size,3) * 9%)'));
+  assert(!/\.board-wrap\.twelve \.cell \.token \{ width:/.test(html));
+  // At the supported 320px viewport, even the 5-point board has >=44px cells.
+  const available=320-24-4-24-6;assert(available/5>=44);
+  const t=browserHarness();t.call('selectGame','twelve');t.call('playGame');t.c.fixture=put([0,20],[1,7,13,21]);t.run("board=fixture.slice();turn='X';render()");t.call('makeMove',0);t.call('makeMove',2);
+  assert.equal(t.run('board[1]'),'');assert(t.get('#board').children[1].innerHTML.includes('token o capture-ghost'));
+  assert(html.includes('@keyframes captured-piece'));assert(html.includes('animation: none !important'));
 });
