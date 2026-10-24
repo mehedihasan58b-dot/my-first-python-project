@@ -106,7 +106,17 @@
     .selection-note { text-align: center; font: 12px/1.7 system-ui,sans-serif; color: #c4a376; margin-top: 32px; }
     #setup-screen .brand h1 { font-size: clamp(30px,6vw,48px); }
     .setup-back { display: block; width: 100%; margin-top: 20px; padding: 12px; min-height: 44px; border: 0; background: transparent; color: #d6b47b; font: 13px system-ui,sans-serif; }
-    @media(max-width: 640px) { .game-cards { grid-template-columns: 1fr; gap: 24px; max-width: 410px; margin: auto; } .game-card { padding: 24px; } .selection-heading { margin-bottom: 24px; } }
+    @media(max-width: 640px) {
+      #selection-screen .game-cards { grid-template-columns: repeat(2,minmax(0,1fr)); gap: clamp(8px,2.5vw,16px); width: 100%; margin: auto; }
+      #selection-screen .game-card { min-width: 0; padding: clamp(12px,3vw,20px) clamp(7px,2vw,14px); border-radius: 16px; }
+      #selection-screen .selection-heading { margin-bottom: 24px; }
+      #selection-screen .card-kicker { font-size: clamp(8px,1.9vw,10px); line-height: 1.5; letter-spacing: .05em; min-height: 30px; }
+      #selection-screen .mini-board { width: 100%; max-width: 240px; border-width: 3px; border-radius: 8px; margin: 15px 0 20px; }
+      #selection-screen .card-title { font-size: clamp(16px,4.1vw,25px); line-height: 1.25; min-height: 2.5em; overflow-wrap: anywhere; }
+      #selection-screen .card-description { font-size: clamp(10px,2.4vw,12px); line-height: 1.65; min-height: 6.6em; margin: 10px 0; }
+      #selection-screen .card-facts { font-size: 8px; line-height: 1.6; letter-spacing: .02em; min-height: 2.6em; margin-bottom: 16px; }
+      #selection-screen .select-label { margin-top: auto; min-height: 44px; padding: 13px 3px; font-size: clamp(10px,2.6vw,13px); }
+    }
     @media(prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
   </style>
 </head>
@@ -450,25 +460,26 @@
       lastCapturedColor=step.captured===null?null:board[step.captured];
       board=rules.apply(board,step,turn);lastMove=step.to;lastCaptured=step.captured;
       captureInTurn ||= step.captured!==null;
+      if(step.captured!==null)playSound('capture');
       if (step.captured!==null && rules.captures(config.game,board,turn,step.to).length) {
-        forced=step.to;selected=step.to;playSound('capture');render();scheduleComputer();return true;
+        forced=step.to;selected=step.to;render();scheduleComputer();return true;
       }
       forced=null;selected=null;turn=rules.other(turn);turnNumber++;
       quiet=captureInTurn?0:quiet+1;captureInTurn=false;aiPlan=[];
       const key=rules.key(board,turn);history.set(key,(history.get(key)||0)+1);
       const result=rules.outcome(config.game,board,turn,history,quiet);
-      if (result) finish(result);else playSound(step.captured===null?'move':'capture');
+      if (result) finish(result);else if(step.captured===null)playSound('move');
       render();scheduleComputer();return true;
     }
     function makeMove(index) {
       if (!active||gameOver||isComputerTurn()) return;
       const legal=rules.moves(config.game,board,turn,forced);
       if (legal.some(m=>m.from===index)) {
-        if (forced===null) selected=selected===index?null:index;
+        if (forced===null){selected=selected===index?null:index;playSound('select');}
         render();return;
       }
       const move=legal.find(m=>m.from===selected&&m.to===index);
-      if (move) commitStep(move);
+      if (move) commitStep(move);else playSound('invalid');
     }
     function disposeWorker() {
       if (aiWorker) aiWorker.terminate();aiWorker=null;
@@ -501,6 +512,7 @@
       cancelComputer();board=rules.initial(config.game);turn=completed[config.game]%2===0?config.side:rules.other(config.side);
       gameOver=false;forced=null;selected=null;quiet=0;turnNumber=0;captureInTurn=false;lastMove=null;lastCaptured=null;lastCapturedColor=null;
       history=new Map([[rules.key(board,turn),1]]);updateStarterHint();render();scheduleComputer();
+      if(active)playSound('newmatch');
     }
     function buildGamePreviews() {
       for(const game of ['morris','twelve']) {
@@ -540,83 +552,201 @@
       $('#selection-screen').hidden=true;$('#game-screen').hidden=true;$('#setup-screen').hidden=false;
       document.title='Woodland Classics — Traditional Strategy Games';updateStarterHint();render();$('#setup-title').focus();
     }
-    let audioContext = null, effectsGain = null, musicGain = null;
-    let soundEnabled = true, musicEnabled = false, musicTimer = null, musicStep = 0;
-    let audioUnavailable = false;
-    async function unlockAudio() {
-      if (audioUnavailable) return false;
-      try {
-        if (!audioContext) {
-          const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-          if (!AudioContextClass) throw new Error('Web Audio unavailable');
-          audioContext = new AudioContextClass();
-          effectsGain = audioContext.createGain(); musicGain = audioContext.createGain();
-          effectsGain.connect(audioContext.destination); musicGain.connect(audioContext.destination);
-          effectsGain.gain.value = soundEnabled ? 0.18 : 0;
-          musicGain.gain.value = musicEnabled ? 0.06 : 0;
-        }
-        if (audioContext.state !== 'running') await audioContext.resume();
-        $('#audio-note').textContent = 'Separate sound and music controls · synthesized on your device';
-        syncMusic();
-        return audioContext.state === 'running';
-      } catch {
-        audioUnavailable = true;
-        $('#audio-note').textContent = 'Audio is unavailable in this browser. The game still works.';
-        return false;
+    // Original synthesized audio: no downloads, permissions or licensed assets.
+    let audioContext=null,effectsGain=null,musicGain=null,masterGain=null,limiter=null;
+    let soundEnabled=true,musicEnabled=true,musicTimer=null,musicStep=0,nextBeatTime=0;
+    let audioUnavailable=false,welcomePlayed=false,welcomeEnd=0,lastEffect='',lastEffectTime=-Infinity;
+    const musicVolume=0.18,voices={effects:new Set(),music:new Set(),welcome:new Set()};
+    const welcomeKey='woodland-welcome-v1';
+    try {welcomePlayed=sessionStorage.getItem(welcomeKey)==='played';} catch { /* Memory-only session fallback. */ }
+    function automate(param,value,seconds=0.1,at=audioContext.currentTime) {
+      if(param.cancelAndHoldAtTime)param.cancelAndHoldAtTime(at);
+      else {param.cancelScheduledValues(at);param.setValueAtTime(param.value,at);}
+      param.linearRampToValueAtTime(value,at+seconds);
+    }
+    function stopVoices(group,fade=0.03) {
+      if(!audioContext)return;
+      const now=audioContext.currentTime;
+      for(const voice of [...group]) {
+        automate(voice.envelope.gain,0,fade,now);
+        try {voice.oscillator.stop(now+fade+0.01);}catch { /* Already ended. */ }
       }
     }
-    function tone(frequency, start, duration, bus, type = 'sine') {
-      const oscillator = audioContext.createOscillator(), envelope = audioContext.createGain();
-      oscillator.type = type; oscillator.frequency.value = frequency;
-      envelope.gain.setValueAtTime(0, start);
-      envelope.gain.linearRampToValueAtTime(0.7, start + 0.015);
-      envelope.gain.exponentialRampToValueAtTime(0.001, start + duration);
-      oscillator.connect(envelope); envelope.connect(bus);
-      oscillator.onended = () => { oscillator.disconnect(); envelope.disconnect(); };
-      oscillator.start(start); oscillator.stop(start + duration + 0.02);
+    function tone(frequency,start,duration,bus,options={}) {
+      if(!audioContext||!bus)return;
+      let oscillator=null,envelope=null,voice=null;
+      try {
+      const {type='sine',volume=0.2,endFrequency=frequency,group=voices.effects,attack=0.008}=options;
+      oscillator=audioContext.createOscillator();envelope=audioContext.createGain();
+      oscillator.type=type;oscillator.frequency.setValueAtTime(frequency,start);
+      if(endFrequency!==frequency)oscillator.frequency.exponentialRampToValueAtTime(endFrequency,start+duration);
+      envelope.gain.setValueAtTime(0,start);
+      envelope.gain.linearRampToValueAtTime(volume,start+attack);
+      envelope.gain.exponentialRampToValueAtTime(0.0001,start+duration);
+      oscillator.connect(envelope);envelope.connect(bus);
+      voice={oscillator,envelope,group};group.add(voice);
+      oscillator.onended=()=>{oscillator.disconnect();envelope.disconnect();group.delete(voice);};
+      oscillator.start(start);oscillator.stop(start+duration+0.03);
+      } catch {
+        if(voice)voice.group.delete(voice);
+        oscillator?.disconnect();envelope?.disconnect();
+        // A failed audio voice must never interrupt gameplay.
+      }
+    }
+    function welcome() {
+      if(welcomePlayed||!soundEnabled||!audioContext||audioContext.state!=='running'||document.hidden)return;
+      // Claim once BEFORE scheduling: concurrent resume promises cannot overlap it.
+      welcomePlayed=true;
+      try {sessionStorage.setItem(welcomeKey,'played');}catch { /* Memory-only session fallback. */ }
+      const start=audioContext.currentTime+0.03;
+      welcomeEnd=start+2.6;
+      [[293.66,0],[440,.35],[587.33,.7],[739.99,1.1]].forEach(([frequency,offset])=>{
+        const duration=2.6-offset;
+        tone(frequency,start+offset,duration,effectsGain,{volume:.16,attack:.03,group:voices.welcome});
+        tone(frequency*2,start+offset,duration*.7,effectsGain,{volume:.025,attack:.02,group:voices.welcome});
+      });
+    }
+    function audioReady() {
+      if(!audioContext||audioContext.state!=='running')return;
+      $('#audio-note').textContent='Original piano, plucked strings and ambient tones · separate sound and music controls';
+      welcome();syncMusic();
+    }
+    async function unlockAudio() {
+      if(audioUnavailable||(!soundEnabled&&!musicEnabled))return false;
+      try {
+        if(!audioContext) {
+          const AudioContextClass=window.AudioContext||window.webkitAudioContext;
+          if(!AudioContextClass)throw new Error('Web Audio unavailable');
+          audioContext=new AudioContextClass();
+          effectsGain=audioContext.createGain();musicGain=audioContext.createGain();masterGain=audioContext.createGain();
+          effectsGain.gain.value=soundEnabled ? .42 : 0;musicGain.gain.value=0;masterGain.gain.value=.85;
+          effectsGain.connect(masterGain);musicGain.connect(masterGain);
+          if(audioContext.createDynamicsCompressor) {
+            limiter=audioContext.createDynamicsCompressor();
+            limiter.threshold.value=-10;limiter.knee.value=12;limiter.ratio.value=4;limiter.attack.value=.003;limiter.release.value=.15;
+            masterGain.connect(limiter);limiter.connect(audioContext.destination);
+          }else masterGain.connect(audioContext.destination);
+          audioContext.onstatechange=()=>{if(audioContext?.state==='running')audioReady();else syncMusic();};
+        }
+      }catch {
+        audioUnavailable=true;$('#audio-note').textContent='Audio is unavailable in this browser. The game still works.';return false;
+      }
+      try {
+        // A page-load attempt may remain pending/denied. Each real gesture makes
+        // a fresh resume call; a denial must never disable later mobile unlocks.
+        if(audioContext.state!=='running')await audioContext.resume();
+        audioReady();return audioContext.state==='running';
+      }catch {
+        $('#audio-note').textContent='Audio will start after your next tap.';return false;
+      }
     }
     function playSound(kind) {
-      // Never create or resume a context from a computer timer or page load.
-      if (!soundEnabled || !audioContext || audioContext.state !== 'running' || document.hidden) return;
-      const notes = { click: [440], move: [330, 495], capture: [220,440,660], win: [523,659,784,1047], lose: [392,330,262], draw: [392,440,392] };
-      (notes[kind] || notes.click).forEach((frequency, i) =>
-        tone(frequency, audioContext.currentTime + i * 0.11, kind === 'click' ? 0.07 : 0.18, effectsGain, kind === 'move' ? 'triangle' : 'sine'));
+      if(!soundEnabled||!audioContext||audioContext.state!=='running'||document.hidden)return;
+      const now=audioContext.currentTime;
+      if(now<welcomeEnd)return; // Give the once-per-session opening room to breathe.
+      if(kind===lastEffect&&!['move','capture'].includes(kind)&&now-lastEffectTime<(kind==='invalid' ? .16 : .055))return;
+      const followCapture=['win','lose','draw'].includes(kind)&&lastEffect==='capture'&&now-lastEffectTime<.15;
+      if(!followCapture)stopVoices(voices.effects,.018);
+      const start=now+(followCapture ? .16 : .006);
+      lastEffect=kind;lastEffectTime=now;
+      const note=(frequency,offset,duration,volume=.2,type='sine',endFrequency=frequency)=>tone(frequency,start+offset,duration,effectsGain,{volume,type,endFrequency});
+      if(kind==='card'){note(659,0,.14,.16);note(988,.035,.18,.08);}
+      else if(kind==='click'){note(520,0,.065,.12,'sine',370);}
+      else if(kind==='select'){note(760,0,.045,.13,'triangle',280);}
+      else if(kind==='move'){note(290,0,.12,.23,'triangle',155);note(580,.008,.085,.07);}
+      else if(kind==='capture'){note(240,0,.12,.22,'triangle',130);note(720,.025,.11,.12);note(1080,.05,.09,.045);}
+      else if(kind==='invalid'){note(185,0,.09,.065);}
+      else if(kind==='newmatch'){[392,494,587].forEach((f,i)=>note(f,i*.075,.27,.12));}
+      else if(kind==='win'){[523,659,784,1047].forEach((f,i)=>note(f,i*.12,.65,.16));}
+      else if(kind==='lose'){[392,330,262].forEach((f,i)=>note(f,i*.13,.38,.12));}
+      else if(kind==='draw'){[392,440,392].forEach((f,i)=>note(f,i*.12,.32,.10));}
+      if(musicTimer!==null&&['win','lose','draw','capture'].includes(kind)) {
+        automate(musicGain.gain,.09,.045);
+        musicGain.gain.linearRampToValueAtTime(musicVolume,now+.9);
+      }
+    }
+    function scheduleMusic() {
+      if(!audioContext||audioContext.state!=='running')return;
+      const now=audioContext.currentTime,beat=60/72;
+      // After an OS interruption, skip stale events instead of scheduling a burst.
+      if(nextBeatTime<now-.3)nextBeatTime=now+.05;
+      const chords=[[50,57,62,65],[46,53,58,62],[48,55,60,64],[45,52,57,60]];
+      while(nextBeatTime<now+.35) {
+        const bar=Math.floor(musicStep/8)%4,phase=musicStep%8,chord=chords[bar];
+        const frequency=midi=>440*2**((midi-69)/12);
+        const midi=chord[[0,2,1,3,2,1,3,2][phase]]+(phase===3||phase===7?12:0);
+        const group=voices.music,start=nextBeatTime;
+        // Felt-piano fundamental and a very quiet plucked-string overtone.
+        tone(frequency(midi),start,1.3,musicGain,{volume:.22,type:'sine',group,attack:.012});
+        tone(frequency(midi)*2,start,.7,musicGain,{volume:.035,type:'triangle',group,attack:.008});
+        // Long overlapping chord envelopes produce a seamless 32-beat loop.
+        if(phase===0)for(const pitch of [chord[0]-12,chord[1],chord[3]])
+          tone(frequency(pitch),start,beat*8+1.0,musicGain,{volume:.055,group,attack:1.1});
+        nextBeatTime+=beat;musicStep=(musicStep+1)%32;
+      }
     }
     function syncMusic() {
-      const shouldPlay = musicEnabled && audioContext?.state === 'running' && !document.hidden;
-      if (musicGain) musicGain.gain.setValueAtTime(shouldPlay ? 0.06 : 0, audioContext.currentTime);
-      if (!shouldPlay) { clearInterval(musicTimer); musicTimer = null; return; }
-      if (musicTimer !== null) return;
-      const melody = [262,330,392,330,294,349,440,349];
-      const beat = () => tone(melody[musicStep++ % melody.length], audioContext.currentTime, 0.45, musicGain);
-      beat(); musicTimer = setInterval(beat, 600);
-    }
-    // Capture taps/keys so mobile Safari/Chrome can resume audio before game actions.
-    const interact = () => { void unlockAudio(); };
-    document.addEventListener('pointerdown', interact, { capture: true });
-    document.addEventListener('keydown', interact, { capture: true });
-    document.addEventListener('click', event => {
-      if (event.target.closest('button:not(.cell), select')) {
-        void unlockAudio().then(ready => { if (ready) playSound('click'); });
+      const shouldPlay=musicEnabled&&audioContext?.state==='running'&&!document.hidden;
+      if(!shouldPlay) {
+        if(musicTimer!==null){clearInterval(musicTimer);musicTimer=null;}
+        if(musicGain){automate(musicGain.gain,0,.3);stopVoices(voices.music,.3);}
+        return;
       }
-    });
-    document.addEventListener('visibilitychange', syncMusic);
+      if(musicTimer!==null)return; // Navigation never restarts the soundtrack.
+      nextBeatTime=Math.max(audioContext.currentTime+.05,welcomeEnd+.15);
+      musicGain.gain.setValueAtTime(0,audioContext.currentTime);
+      musicGain.gain.setValueAtTime(0,nextBeatTime);
+      musicGain.gain.linearRampToValueAtTime(musicVolume,nextBeatTime+1.6);
+      scheduleMusic();musicTimer=setInterval(scheduleMusic,180);
+    }
     function updateAudioControls() {
-      $('#sound-toggle').textContent = soundEnabled ? '♫ Sound ON' : '♫ Sound OFF';
-      $('#music-toggle').textContent = musicEnabled ? '♪ Music ON' : '♪ Music OFF';
-      $('#sound-toggle').setAttribute('aria-pressed', String(soundEnabled));
-      $('#music-toggle').setAttribute('aria-pressed', String(musicEnabled));
-      $('#setup-sound').checked = soundEnabled;
-      $('#setup-music').checked = musicEnabled;
-      if (effectsGain) effectsGain.gain.setValueAtTime(soundEnabled ? 0.18 : 0, audioContext.currentTime);
+      $('#sound-toggle').textContent=soundEnabled?'♫ Sound ON':'♫ Sound OFF';
+      $('#music-toggle').textContent=musicEnabled?'♪ Music ON':'♪ Music OFF';
+      $('#sound-toggle').setAttribute('aria-pressed',String(soundEnabled));$('#music-toggle').setAttribute('aria-pressed',String(musicEnabled));
+      $('#setup-sound').checked=soundEnabled;$('#setup-music').checked=musicEnabled;
+      if(effectsGain)automate(effectsGain.gain,soundEnabled ? .42 : 0,.04);
       syncMusic();
     }
-    async function setSound(enabled) { soundEnabled = enabled; updateAudioControls(); savePreferences(); await unlockAudio(); }
-    async function setMusic(enabled) { musicEnabled = enabled; updateAudioControls(); savePreferences(); await unlockAudio(); }
-    $('#sound-toggle').addEventListener('click', () => setSound(!soundEnabled));
-    $('#music-toggle').addEventListener('click', () => setMusic(!musicEnabled));
-    $('#setup-sound').addEventListener('change', () => setSound($('#setup-sound').checked));
-    $('#setup-music').addEventListener('change', () => setMusic($('#setup-music').checked));
+    async function setSound(enabled) {
+      soundEnabled=enabled;
+      if(!enabled){stopVoices(voices.effects);stopVoices(voices.welcome);welcomeEnd=0;}
+      updateAudioControls();savePreferences();await unlockAudio();
+    }
+    async function setMusic(enabled) {musicEnabled=enabled;updateAudioControls();savePreferences();await unlockAudio();}
+    const interact=event=>{
+      void unlockAudio().then(ready=>{
+        if(!ready||!event?.target?.closest)return;
+        const cell=event.target.closest('.cell');
+        if(cell?.disabled&&active&&!gameOver&&!isComputerTurn())playSound('invalid');
+      });
+    };
+    document.addEventListener('pointerdown',interact,{capture:true});
+    document.addEventListener('keydown',interact,{capture:true});
+    document.addEventListener('click',event=>{
+      void unlockAudio().then(ready=>{
+        if(!ready)return;
+        if(event.target.closest('.game-card'))playSound('card');
+        else if(event.target.closest('button:not(.cell):not(#restart):not(#next-match):not(#play-game), select, input'))playSound('click');
+      });
+    });
+    document.addEventListener('visibilitychange',()=>{
+      if(document.hidden){stopVoices(voices.effects);stopVoices(voices.welcome);welcomeEnd=0;syncMusic();}
+      else void unlockAudio();
+    });
+    function cleanupAudio() {
+      if(musicTimer!==null)clearInterval(musicTimer);musicTimer=null;
+      for(const group of Object.values(voices))stopVoices(group,.02);
+      if(audioContext){audioContext.onstatechange=null;const closing=audioContext.close?.();closing?.catch(()=>{});}
+      for(const node of [effectsGain,musicGain,masterGain,limiter])node?.disconnect();
+      audioContext=null;effectsGain=null;musicGain=null;masterGain=null;limiter=null;welcomeEnd=0;
+      for(const group of Object.values(voices))group.clear();
+    }
+    window.addEventListener?.('pagehide',cleanupAudio);
+    window.addEventListener?.('pageshow',()=>{void unlockAudio();});
+    $('#sound-toggle').addEventListener('click',()=>setSound(!soundEnabled));
+    $('#music-toggle').addEventListener('click',()=>setMusic(!musicEnabled));
+    $('#setup-sound').addEventListener('change',()=>setSound($('#setup-sound').checked));
+    $('#setup-music').addEventListener('change',()=>setMusic($('#setup-music').checked));
     $('#select-morris').addEventListener('click',()=>selectGame('morris'));
     $('#select-twelve').addEventListener('click',()=>selectGame('twelve'));
     $('#back-selection').addEventListener('click',backToSelection);
@@ -630,6 +760,7 @@
     $('#difficulty-field').hidden=$('#mode').value!=='computer';
     $('#difficulty').disabled=$('#mode').value!=='computer';
     drawBoard();restartGame();
+    void unlockAudio(); // Autoplay attempt; safely retried on the first gesture.
   </script>
 </body>
 </html>
