@@ -115,11 +115,11 @@ function browserHarness({preferences=null,results=null,storageBlocked=false,work
       className:'',textContent:'',focus(){document.activeElement=this;},getAttribute(k){return this.attributes[k]??null},removeAttribute(k){delete this.attributes[k];},append(child){this.children.push(child)},setAttribute(k,v){this.attributes[k]=v},
       addEventListener(k,fn){this.events[k]=fn},
       get innerHTML(){return content},set innerHTML(value){content=value;this.children=[];},
-      classList:{add(c){classes.add(c)},toggle(c,on){on?classes.add(c):classes.delete(c)},contains:c=>classes.has(c)}};
+      classList:{add(...cs){cs.forEach(c=>classes.add(c))},remove(...cs){cs.forEach(c=>classes.delete(c))},toggle(c,on){on?classes.add(c):classes.delete(c)},contains:c=>classes.has(c)}};
   }
   const get=s=>elements[s] ||= element();
   if(nativeDialog){const dialog=get('#settings-dialog');dialog.showModal=function(){this.open=true;this.attributes.open='';};dialog.close=function(){this.open=false;delete this.attributes.open;this.events.close?.();};}
-  const document={hidden:false,title:'',documentElement:element(),querySelector:get,createElement:element,
+  const document={hidden:false,title:'',body:element(),documentElement:element(),querySelector:get,createElement:element,
     querySelectorAll:s=>s==='.palette-choice'?get('#palette-options').children:[],addEventListener(k,fn){(documentEvents[k] ||= []).push(fn)}};
   for(const [id,value] of [['game','morris'],['mode','pvp'],['difficulty','easy'],['colors','redblue'],['side','X']])get('#'+id).value=value;
   for(const id of ['setup-screen','game-screen','audio-note'])if(new RegExp('id=\"'+id+'\" hidden').test(html))get('#'+id).hidden=true;
@@ -143,7 +143,7 @@ function browserHarness({preferences=null,results=null,storageBlocked=false,work
     terminate(){this.terminated=true;}
   }
   const localStorage={getItem(k){if(storageBlocked)throw Error('blocked');return stored[k]||null;},setItem(k,v){if(storageBlocked)throw Error('blocked');stored[k]=v;}};
-  const c=vm.createContext({document,window:{...(audio?{AudioContext}:{}),addEventListener(k,fn){windowEvents[k]=fn}},sessionStorage:{getItem:k=>session.get(k)||null,setItem:(k,v)=>session.set(k,v)},localStorage,performance,
+  const c=vm.createContext({document,window:{...(audio?{AudioContext}:{}),addEventListener(k,fn){const previous=windowEvents[k];windowEvents[k]=event=>{previous?.(event);fn(event);};}},sessionStorage:{getItem:k=>session.get(k)||null,setItem:(k,v)=>session.set(k,v)},localStorage,performance,
     setTimeout:fn=>{timers.set(++serial,fn);return serial},clearTimeout:id=>timers.delete(id),
     setInterval:fn=>{intervals.set(++serial,fn);return serial},clearInterval:id=>intervals.delete(id),
     ...(worker?{Worker,Blob,URL:{createObjectURL(blob){const url='blob:'+ ++serial;urls.set(url,blob);return url},revokeObjectURL(url){urls.delete(url)}}}:{})});
@@ -481,4 +481,59 @@ test('Capture choice floats inside the board frame, hides on Continue, and retur
   t.call('makeMove',0);t.call('makeMove',2);assert.equal(t.get('#capture-choice').hidden,false);assert.equal(t.document.activeElement,t.get('#continue-capturing'));
   t.get('#continue-capturing').events.click();assert.equal(t.get('#capture-choice').hidden,true);assert.equal(t.run('forced'),2);
   t.call('makeMove',12);assert.equal(t.get('#capture-choice').hidden,false);t.get('#end-capture-turn').events.click();assert.equal(t.get('#capture-choice').hidden,true);assert.equal(t.run('turn'),'O');
+});
+
+test('Gameplay square fits width AND remaining height at all requested portrait viewports, with safe-area allowance',()=>{
+  const t=browserHarness();
+  for(const [w,h] of [[320,568],[360,640],[375,667],[390,844],[430,932]])for(const game of ['morris','twelve'])for(const safe of [0,40]){
+    const pad=Math.max(6,Math.min(10,Math.min(w,h)*.012));
+    const compact=h<=620,gap=compact?3:Math.max(4,Math.min(7,h*.0065));
+    const header=compact?76:Math.max(92,Math.min(112,h*.12));
+    const rows=header+(compact?22.4:26.4)+(compact?40:44)+(compact?64:72)+(compact?44:48);
+    const height=h-rows-gap*5-Math.max(pad*2,safe),width=w-pad*2;
+    const result=t.call('gameplayBoardFit',width,height,game);
+    assert.equal(result.fallback,false,`${game} ${w}x${h} safe=${safe}`);assert(result.size<=height&&result.size<=width);
+    assert((result.size-32)/rules.size(game)>=44,`${game} touch targets remain usable`);
+  }
+  assert(html.includes('height: 100dvh'));assert(html.includes('env(safe-area-inset-bottom,0px)'));assert(html.includes('viewport-fit=cover'));
+  assert(html.includes('body.gameplay-active { height: 100dvh; min-height: 0; overflow: hidden;'));
+});
+test('Fixed gameplay slots keep board size constant through moves, scores, audio, result/Next Match and optional capture decisions',async()=>{
+  const t=browserHarness();t.get('#board-stage').clientWidth=348;t.get('#board-stage').clientHeight=320;t.call('selectGame','twelve');t.call('playGame');
+  assert(t.document.body.classList.contains('gameplay-active'));const size=t.get('#game-screen').style.values['--board-limit'];assert.equal(size,'320px');
+  t.c.fixture=put([0,20],[1,7,13,21]);t.run("board=fixture.slice();turn='X';history=new Map();render()");
+  t.call('makeMove',0);t.call('makeMove',2);assert.equal(t.get('#game-screen').style.values['--board-limit'],size);
+  t.call('continueCapturing');t.call('makeMove',12);t.call('endCaptureTurn');assert.equal(t.get('#game-screen').style.values['--board-limit'],size);
+  await t.call('setMusic',false);await t.call('setSound',false);assert.equal(t.get('#game-screen').style.values['--board-limit'],size);
+  t.call('finish',{winner:'draw',reason:'test'});t.call('render');assert.equal(t.get('#restart').hidden,true);assert.equal(t.get('#next-match').hidden,false);assert.equal(t.get('#game-screen').style.values['--board-limit'],size);
+  t.get('#next-match').events.click();assert.equal(t.get('#restart').hidden,false);assert.equal(t.get('#next-match').hidden,true);assert.equal(t.get('#game-screen').style.values['--board-limit'],size);
+  t.call('backToSetup');assert(!t.document.body.classList.contains('gameplay-active'));assert(!t.document.body.classList.contains('gameplay-scroll'));
+});
+test('Player 2 is visually left and Player 1 right with actual side/palette, and Morris hides capture stats',()=>{
+  const t=browserHarness();
+  for(const side of ['X','O'])for(const color of ['redblue','orangesky']){
+    t.call('selectGame','twelve');t.get('#side').value=side;t.get('#colors').value=color;t.call('playGame');
+    assert.equal(t.get(side==='X'?'#player-x':'#player-o').style.order,'3');assert.equal(t.get(side==='X'?'#player-o':'#player-x').style.order,'1');
+    assert(t.get(side==='X'?'#x-name':'#o-name').textContent.startsWith('Player 1'));
+    assert(t.get(side==='X'?'#o-name':'#x-name').textContent.startsWith('Player 2'));assert.equal(t.get('#capture-count').hidden,false);
+    t.call('backToSetup');
+  }
+  t.call('selectGame','morris');t.call('playGame');assert.equal(t.get('#capture-count').hidden,true);
+  const gameplay=html.slice(html.indexOf('<section id="game-screen"'),html.indexOf('<p id="audio-note"'));
+  assert(!gameplay.includes('id="game-rules"'));assert(!gameplay.includes('id="reset-scores"'));assert(!gameplay.includes('<details'));
+});
+test('Compact help/settings popup preserves rules and score reset with focus and keyboard access',()=>{
+  const t=browserHarness();t.call('selectGame','twelve');t.call('playGame');t.run('currentScores().X=3');
+  t.get('#game-help-open').events.click();assert.equal(t.run('helpOpen'),true);assert.equal(t.document.activeElement,t.get('#game-help-close'));assert(t.get('#game-rules').textContent.includes('Capturing is always optional'));
+  t.get('#reset-scores').events.click();assert.equal(t.run('currentScores().X'),0);assert.equal(t.run('completed.twelve'),0);
+  const dialog=t.get('#game-help');let prevented=false;dialog.events.keydown({key:'Tab',shiftKey:true,preventDefault(){prevented=true;}});assert(prevented);assert.equal(t.document.activeElement,t.get('#reset-scores'));
+  dialog.events.keydown({key:'Escape',preventDefault(){}});assert.equal(t.run('helpOpen'),false);assert.equal(t.document.activeElement,t.get('#game-help-open'));
+  t.call('openGameHelp');t.call('backToSetup');assert.equal(t.run('helpOpen'),false);assert.equal(t.get('#help-shade').hidden,true);
+});
+test('Exceptionally short screens or enlarged text use a latched scroll fallback, cleared after resizing or leaving',()=>{
+  const t=browserHarness();t.get('#board-stage').clientWidth=300;t.get('#board-stage').clientHeight=80;t.call('selectGame','twelve');t.call('playGame');
+  assert(t.document.body.classList.contains('gameplay-scroll'));assert(t.call('gameplayBoardFit',300,80,'twelve').fallback);assert(t.call('gameplayBoardFit',400,400,'twelve',24).fallback);
+  t.get('#board-stage').clientHeight=300;t.call('fitGameplay');assert(t.document.body.classList.contains('gameplay-scroll'),'No resize-observer fallback oscillation');
+  t.run('window.innerHeight=844');t.call('fitGameplay');assert(!t.document.body.classList.contains('gameplay-scroll'));
+  t.call('backToSelection');assert(!t.document.body.classList.contains('gameplay-active'));
 });
