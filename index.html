@@ -26,12 +26,6 @@
     .setup-heading h2 { color: #ffe0a0; font-size: 25px; margin-bottom: 8px; }
     .setup-heading p { color: #cfb38a; font: 13px/1.6 system-ui, sans-serif; }
     .settings { display: grid; grid-template-columns: 1fr 1fr; gap: 22px 16px; }
-    label { display: grid; gap: 9px; color: #f6dcac; font: 600 13px system-ui, sans-serif; }
-    select { width: 100%; min-width: 0; min-height: 48px; padding: 12px 9px; border: 1px solid #b17d43; border-radius: 10px; background: #24160f; color: #fff0d1; font: 13px system-ui, sans-serif; }
-    select:disabled { opacity: .5; }
-    .setup-audio { display: flex; flex-wrap: wrap; gap: 22px; margin: 26px 0; }
-    .setup-audio label { display: flex; align-items: center; min-height: 44px; gap: 10px; }
-    input { accent-color: #d2a451; width: 20px; height: 20px; }
     .palette-options { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-top: 24px; }
     .palette-choice { min-height: 86px; padding: 10px 5px; border: 1px solid #93693d; border-radius: 12px; background: #28190f; color: #f1d6a8; font: 11px system-ui,sans-serif; }
     .palette-choice[aria-pressed="true"] { border: 2px solid #ffe29c; background: #624022; }
@@ -107,16 +101,60 @@
     #setup-screen .brand h1 { font-size: clamp(30px,6vw,48px); }
     .setup-back { display: block; width: 100%; margin-top: 20px; padding: 12px; min-height: 44px; border: 0; background: transparent; color: #d6b47b; font: 13px system-ui,sans-serif; }
     @media(max-width: 640px) {
-      #selection-screen .game-cards { grid-template-columns: repeat(2,minmax(0,1fr)); gap: clamp(8px,2.5vw,16px); width: 100%; margin: auto; }
-      #selection-screen .game-card { min-width: 0; padding: clamp(12px,3vw,20px) clamp(7px,2vw,14px); border-radius: 16px; }
+      #selection-screen .game-cards { grid-template-columns: minmax(0,1fr); gap: 22px; width: 100%; max-width: 560px; margin: auto; }
+      #selection-screen .game-card { position: relative; display: grid; grid-template-columns: minmax(0,.95fr) minmax(0,1.2fr); grid-template-rows: auto auto auto auto; column-gap: clamp(12px,3.5vw,22px); align-items: center; min-width: 0; padding: clamp(15px,4vw,23px); border-radius: 19px; text-align: left; }
+      #selection-screen .game-card::before, #selection-screen .game-card::after { content: '❧'; position: absolute; color: #dda657; font-size: 24px; line-height: 1; pointer-events: none; }
+      #selection-screen .game-card::before { left: 5px; top: 4px; }
+      #selection-screen .game-card::after { right: 5px; bottom: 4px; transform: rotate(180deg); }
+      #selection-screen .mini-board { grid-column: 1; grid-row: 1 / 5; width: 100%; margin: 0; border-width: 4px; border-radius: 9px; }
+      #selection-screen .card-kicker, #selection-screen .card-title, #selection-screen .card-description, #selection-screen .select-label { grid-column: 2; min-width: 0; }
+      #selection-screen .card-kicker { font-size: clamp(8px,1.9vw,10px); line-height: 1.4; letter-spacing: .04em; margin-bottom: 6px; }
+      #selection-screen .card-title { font-size: clamp(19px,5vw,28px); line-height: 1.15; overflow-wrap: anywhere; }
+      #selection-screen .card-description { font-size: clamp(10px,2.4vw,12px); line-height: 1.55; margin: 8px 0 12px; }
+      #selection-screen .card-description br { display: none; }
+      #selection-screen .card-facts { display: none; }
+      #selection-screen .select-label { min-height: 44px; padding: 13px 5px; font-size: 11px; text-align: center; }
       #selection-screen .selection-heading { margin-bottom: 24px; }
-      #selection-screen .card-kicker { font-size: clamp(8px,1.9vw,10px); line-height: 1.5; letter-spacing: .05em; min-height: 30px; }
-      #selection-screen .mini-board { width: 100%; max-width: 240px; border-width: 3px; border-radius: 8px; margin: 15px 0 20px; }
-      #selection-screen .card-title { font-size: clamp(16px,4.1vw,25px); line-height: 1.25; min-height: 2.5em; overflow-wrap: anywhere; }
-      #selection-screen .card-description { font-size: clamp(10px,2.4vw,12px); line-height: 1.65; min-height: 6.6em; margin: 10px 0; }
-      #selection-screen .card-facts { font-size: 8px; line-height: 1.6; letter-spacing: .02em; min-height: 2.6em; margin-bottom: 16px; }
-      #selection-screen .select-label { margin-top: auto; min-height: 44px; padding: 13px 3px; font-size: clamp(10px,2.6vw,13px); }
     }
+    .setup-field { display: grid; gap: 9px; align-content: start; min-width: 0; font: 600 12px system-ui,sans-serif; color: #f3d7a1; }
+    .choice-trigger { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 56px; width: 100%; padding: 14px 12px; border: 1px solid #cc9850; border-radius: 12px; color: #ffebbf; background: repeating-linear-gradient(3deg,#ffffff03 0 1px,transparent 2px 6px),linear-gradient(125deg,#3d2415,#1f120b); box-shadow: inset 0 0 0 2px #1a0d07,inset 0 0 0 3px #77502c,0 4px 10px #0005; text-align: left; font: 600 12px/1.45 system-ui,sans-serif; }
+    .choice-trigger::after { content: '⌄'; font-size: 20px; color: #eec372; }
+    .choice-trigger[aria-expanded="true"] { border-color: #ffe4a4; box-shadow: 0 0 18px #dda85644; }
+    .choice-trigger:disabled { opacity: .5; cursor: default; }
+    .choice-summary { min-width: 0; overflow-wrap: anywhere; }
+    .choice-summary .token { display: inline-block; width: 20px; height: 20px; border-width: 1px; vertical-align: middle; margin-right: 4px; }
+    .setup-audio { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 24px 0 18px; }
+    .gold-switch { display: flex; align-items: center; justify-content: space-between; gap: 8px; border: 1px solid #9f723e; border-radius: 12px; min-height: 65px; background: linear-gradient(120deg,#362116,#1d110b); color: #efd3a1; padding: 12px; font: 600 12px/1.5 system-ui,sans-serif; text-align: left; }
+    .switch-track { display: block; flex-shrink: 0; position: relative; width: 50px; height: 28px; border-radius: 20px; border: 1px solid #ab7c41; background: #170d08; box-shadow: inset 0 2px 5px #000b; }
+    .switch-track::before { content: ''; position: absolute; left: 3px; top: 3px; width: 20px; height: 20px; border-radius: 50%; background: radial-gradient(circle at 30% 20%,#ffe8a5,#b27627 70%); box-shadow: 0 2px 3px #0008; transition: transform .18s; }
+    .gold-switch[aria-checked="true"] .switch-track { background: linear-gradient(#846024,#4b300d); border-color: #f3cc7e; }
+    .gold-switch[aria-checked="true"] .switch-track::before { transform: translateX(22px); }
+    .switch-text { display: block; color: #ba9866; font-size: 9px; letter-spacing: .12em; }
+    .gold-switch[aria-checked="true"] .switch-text { color: #ffe19a; }
+    #starter-hint { padding: 16px 18px; margin: 18px 0 24px; border: 1px solid #b88545; border-radius: 12px; background: repeating-linear-gradient(2deg,#ffffff03 0 1px,transparent 2px 6px),#21130b; box-shadow: inset 0 0 0 3px #120a05,inset 0 0 0 4px #5d3b1b; color: #e5c38a; font-size: 12px; }
+    #play-game { background: linear-gradient(#ffe3a0,#c18c36 48%,#8e5715); color: #291608; text-shadow: 0 1px #fff8; box-shadow: inset 0 1px 3px #fff9,0 5px 0 #472508,0 8px 22px #d39b3233; transition: transform .15s,filter .15s; }
+    #play-game:active { transform: translateY(3px); }
+    .setup-back { border: 1px solid #a98049; border-radius: 11px; background: linear-gradient(#46301f,#21140c); box-shadow: inset 0 1px #bb956633,0 3px 0 #140b05; color: #edcd91; }
+    .choice-dialog { width: min(460px,calc(100% - 28px)); max-height: min(80svh,650px); padding: 25px; border: 2px solid #e1af61; border-radius: 20px; color: #ffe7b0; background: repeating-linear-gradient(2deg,#ffffff03 0 1px,transparent 2px 7px),linear-gradient(125deg,#4b2c16,#21120a); box-shadow: inset 0 0 0 4px #190d06,inset 0 0 0 6px #805329,0 20px 70px #000d; overflow-y: auto; overscroll-behavior: contain; opacity: 0; transform: translateY(12px) scale(.97); transition: opacity .18s,transform .18s,display .18s allow-discrete,overlay .18s allow-discrete; }
+    .choice-dialog:not([open]) { display: none; }
+    #choice-shade { position: fixed; inset: 0; z-index: 99; background: #100905cc; backdrop-filter: blur(4px); }
+    .choice-dialog[open] { display: block; opacity: 1; transform: translateY(0) scale(1); }
+    @starting-style { .choice-dialog[open] { opacity: 0; transform: translateY(12px) scale(.97); } }
+    .choice-dialog::backdrop { background: #100905cc; backdrop-filter: blur(4px); }
+    .choice-dialog[data-fallback="true"][open] { position: fixed; top: 50%; left: 50%; margin: 0; transform: translate(-50%,-50%); z-index: 100; }
+    .dialog-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 18px; }
+    .dialog-heading h2 { font-size: 23px; margin: 0; }
+    #close-choice { width: 44px; min-height: 44px; border: 1px solid #c99c53; border-radius: 50%; background: #28160b; color: #ffe2a5; font-size: 22px; }
+    #choice-options { display: grid; gap: 12px; }
+    .menu-option { width: 100%; min-height: 58px; padding: 14px; border: 1px solid #956936; border-radius: 11px; background: linear-gradient(#3d2819,#25160e); color: #e8c995; font: 600 14px system-ui,sans-serif; text-align: left; }
+    .menu-option::before { content: '◇'; color: #c59850; margin-right: 12px; }
+    .menu-option[aria-pressed="true"] { border-color: #ffe09a; background: linear-gradient(#694622,#38210e); box-shadow: inset 0 0 0 1px #dab06c55,0 0 12px #d6992533; color: #ffedc3; }
+    .menu-option[aria-pressed="true"]::before { content: '◆'; color: #ffdf8a; }
+    .choice-dialog .palette-options { grid-template-columns: 1fr 1fr; margin: 0; gap: 12px; }
+    .choice-dialog .palette-choice { position: relative; min-height: 108px; padding: 15px 6px; border-radius: 12px; background: linear-gradient(#3b2718,#21140c); box-shadow: inset 0 0 0 2px #140b06; }
+    .choice-dialog .palette-choice .token { width: 32px; height: 32px; }
+    .choice-dialog .palette-choice[aria-pressed="true"]::after { content: '◆'; position: absolute; top: 7px; right: 7px; color: #ffdc8b; }
+    @media(max-width: 380px) { .gold-switch { padding: 10px 8px; gap: 5px; font-size: 10px; } .switch-track { width: 42px; } .gold-switch[aria-checked="true"] .switch-track::before { transform: translateX(14px); } .choice-dialog { padding: 21px 16px; } }
     @media(prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
   </style>
 </head>
@@ -126,8 +164,8 @@
     <section id="selection-screen" aria-labelledby="selection-title">
       <header class="selection-heading brand"><span class="eyebrow">Woodland Classics · The strategy collection</span><h1 id="selection-title" tabindex="-1">Choose Your Game</h1><p>Beautiful boards. Timeless rivalries. Make your move.</p></header>
       <div class="game-cards">
-        <button id="select-morris" class="game-card wood-panel" data-game="morris" aria-pressed="true"><span class="card-kicker">01 · The classic duel</span><span id="preview-morris" class="mini-board" aria-hidden="true"></span><span class="card-title">Three Men's Morris</span><span class="card-description">Three pieces each. Four winning lines.<br>One clever move can change everything.</span><span class="card-facts">9 intersections · Quick strategy</span><span class="select-label">Select Game →</span></button>
-        <button id="select-twelve" class="game-card wood-panel" data-game="twelve" aria-pressed="false"><span class="card-kicker">02 · The capture challenge</span><span id="preview-twelve" class="mini-board" aria-hidden="true"></span><span class="card-title">Twelve Guti</span><span class="card-description">Twelve pieces each. Plan your path.<br>Chain your captures and claim the board.</span><span class="card-facts">25 intersections · Chained captures</span><span class="select-label">Select Game →</span></button>
+        <button id="select-morris" class="game-card wood-panel" data-game="morris" aria-pressed="true"><span class="card-kicker">01 · The classic duel</span><span id="preview-morris" class="mini-board" aria-hidden="true"></span><span class="card-title">Three Men's Morris</span><span class="card-description">Three pieces each. Four winning lines.<br> One clever move can change everything.</span><span class="card-facts">9 intersections · Quick strategy</span><span class="select-label">Select Game →</span></button>
+        <button id="select-twelve" class="game-card wood-panel" data-game="twelve" aria-pressed="false"><span class="card-kicker">02 · The capture challenge</span><span id="preview-twelve" class="mini-board" aria-hidden="true"></span><span class="card-title">Twelve Guti</span><span class="card-description">Twelve pieces each. Plan your path.<br> Chain your captures and claim the board.</span><span class="card-facts">25 intersections · Chained captures</span><span class="select-label">Select Game →</span></button>
       </div>
       <p class="selection-note">Play together or challenge the computer · No account needed</p>
     </section>
@@ -136,13 +174,12 @@
       <div class="setup-heading"><h2 id="setup-title" tabindex="-1">Game Setup</h2><p>Choose your opponent, pick your pieces, and take a seat.</p></div>
       <div class="settings">
         <input id="game" type="hidden" value="morris">
-        <label>Game mode<select id="mode"><option value="pvp">Player vs Player</option><option value="computer">Player vs Computer</option></select></label>
-        <label id="difficulty-field" hidden>Computer difficulty<select id="difficulty" disabled><option value="easy">Easy</option><option value="medium">Medium</option><option value="hard">Hard</option></select></label>
-        <label>Piece color set<select id="colors"><option value="redblue">Red vs Blue</option><option value="greengold">Green vs Gold</option><option value="blackwhite">Black vs White</option><option value="purplesilver">Purple vs Silver</option><option value="browncream">Brown vs Cream</option><option value="orangesky">Orange vs Sky Blue</option></select></label>
-        <label>Your side (Player 1)<select id="side"><option value="X">Top pieces</option><option value="O">Bottom pieces</option></select></label>
+        <div class="setup-field"><span id="label-mode">Game Mode</span><input id="mode" type="hidden" value="pvp"><button type="button" id="pick-mode" class="choice-trigger" aria-haspopup="dialog" aria-controls="settings-dialog" aria-expanded="false" aria-labelledby="label-mode value-mode"><span id="value-mode" class="choice-summary"></span></button></div>
+        <div class="setup-field" id="difficulty-field" hidden><span id="label-difficulty">Computer Difficulty</span><input id="difficulty" type="hidden" value="easy"><button type="button" id="pick-difficulty" class="choice-trigger" aria-haspopup="dialog" aria-controls="settings-dialog" aria-expanded="false" aria-labelledby="label-difficulty value-difficulty"><span id="value-difficulty" class="choice-summary"></span></button></div>
+        <div class="setup-field"><span id="label-side">Player Side</span><input id="side" type="hidden" value="X"><button type="button" id="pick-side" class="choice-trigger" aria-haspopup="dialog" aria-controls="settings-dialog" aria-expanded="false" aria-labelledby="label-side value-side"><span id="value-side" class="choice-summary"></span></button></div>
+        <div class="setup-field"><span id="label-colors">Piece Color Selection</span><input id="colors" type="hidden" value="redblue"><button type="button" id="pick-colors" class="choice-trigger" aria-haspopup="dialog" aria-controls="settings-dialog" aria-expanded="false" aria-labelledby="label-colors value-colors"><span id="value-colors" class="choice-summary"></span></button></div>
       </div>
-      <div id="palette-options" class="palette-options" role="group" aria-label="Piece color previews"></div>
-      <div class="setup-audio"><label><input id="setup-sound" type="checkbox" checked>Sound effects</label><label><input id="setup-music" type="checkbox">Background music</label></div>
+      <div class="setup-audio"><button id="setup-sound" class="gold-switch" role="switch" aria-checked="true" aria-label="Sound Effects"><span>Sound Effects<span class="switch-text">ON</span></span><span class="switch-track" aria-hidden="true"></span></button><button id="setup-music" class="gold-switch" role="switch" aria-checked="true" aria-label="Background Music"><span>Background Music<span class="switch-text">ON</span></span><span class="switch-track" aria-hidden="true"></span></button></div>
       <p id="starter-hint" class="score-note">Player 1 starts match 1. The first turn alternates after each completed match.</p>
       <button id="play-game" class="gold-button">Play Game →</button>
       <button id="back-selection" class="setup-back">← Back to Game Selection</button>
@@ -164,7 +201,9 @@
       <details><summary>How to play</summary><p id="game-rules"></p></details>
     </section>
     <p id="audio-note" hidden>Audio starts after your first tap. Music is optional.</p>
-    <footer>Made for a little friendly competition.</footer>
+
+    <div id="choice-shade" hidden aria-hidden="true"></div>
+    <dialog id="settings-dialog" class="choice-dialog" aria-labelledby="choice-title" aria-modal="true"><div class="dialog-heading"><h2 id="choice-title">Choose a setting</h2><button id="close-choice" aria-label="Close settings">×</button></div><div id="choice-options" role="group" aria-label="Setting choices"></div><div id="palette-options" class="palette-options" role="group" aria-label="Piece color previews" hidden></div></dialog>
   </main>
   <script>
     // Pure rules shared by humans, AI, board drawing and the tests.
@@ -378,13 +417,83 @@
       palettes[currentPalette].values.forEach((value,i)=>document.documentElement.style.setProperty(['--top','--top-light','--top-dark','--bottom','--bottom-light','--bottom-dark'][i],value));
       document.querySelectorAll('.palette-choice').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.palette===currentPalette)));
     }
+    const settingChoices={
+      mode:{title:'Game Mode',options:[['pvp','Player vs Player'],['computer','Player vs Computer']]},
+      difficulty:{title:'Computer Difficulty',options:[['easy','Easy'],['medium','Medium'],['hard','Hard']]},
+      side:{title:'Player Side',options:[['X','Top pieces'],['O','Bottom pieces']]},
+      colors:{title:'Piece Color Selection',options:Object.entries(palettes).map(([key,p])=>[key,p.name])}
+    };
+    let activeChoice=null,choiceTrigger=null,choiceOpen=false;
+    function updateSetupControls() {
+      for(const [id,setting] of Object.entries(settingChoices)) {
+        const selected=setting.options.find(([value])=>value===$('#'+id).value);
+        $('#value-'+id).textContent=selected?selected[1]:setting.options[0][1];
+      }
+      $('#pick-difficulty').disabled=$('#mode').value!=='computer';
+    }
+    function choiceButtons() {
+      return activeChoice==='colors'?[...$('#palette-options').children]:[...$('#choice-options').children];
+    }
+    function closeChoice() {
+      if(!choiceOpen)return;
+      $('#choice-shade').hidden=true;
+      choiceOpen=false;const trigger=choiceTrigger;activeChoice=null;choiceTrigger=null;
+      if(trigger)trigger.setAttribute('aria-expanded','false');
+      const dialog=$('#settings-dialog');
+      if(typeof dialog.close==='function')dialog.close();else dialog.removeAttribute('open');
+      trigger?.focus();
+    }
+    function commitChoice(id,value) {
+      if(!settingChoices[id]?.options.some(([key])=>key===value))return;
+      $('#'+id).value=value;setupChanged();closeChoice();
+    }
+    function openChoice(id) {
+      if(!settingChoices[id]||(id==='difficulty'&&$('#mode').value!=='computer'))return;
+      closeChoice();activeChoice=id;choiceTrigger=$('#pick-'+id);choiceOpen=true;
+      choiceTrigger.setAttribute('aria-expanded','true');
+      $('#choice-title').textContent=settingChoices[id].title;
+      $('#choice-options').hidden=id==='colors';$('#palette-options').hidden=id!=='colors';
+      if(id!=='colors') {
+        $('#choice-options').innerHTML='';
+        for(const [value,label] of settingChoices[id].options) {
+          const button=document.createElement('button');button.type='button';button.className='menu-option';button.dataset.value=value;
+          button.textContent=label;button.setAttribute('aria-pressed',String($('#'+id).value===value));
+          button.addEventListener('click',()=>commitChoice(id,value));$('#choice-options').append(button);
+        }
+      }else applyPalette();
+      const dialog=$('#settings-dialog');
+      if(typeof dialog.showModal==='function')dialog.showModal();else {dialog.setAttribute('data-fallback','true');dialog.setAttribute('open','');$('#choice-shade').hidden=false;}
+      const selected=choiceButtons().find(button=>button.getAttribute('aria-pressed')==='true');
+      (selected||choiceButtons()[0]||$('#close-choice')).focus();
+    }
+    $('#settings-dialog').addEventListener('keydown',event=>{
+      if(!choiceOpen)return;
+      const buttons=choiceButtons(),index=buttons.indexOf(document.activeElement);
+      if(event.key==='Escape'){event.preventDefault();closeChoice();return;}
+      if(['ArrowDown','ArrowRight','ArrowUp','ArrowLeft','Home','End'].includes(event.key)) {
+        event.preventDefault();
+        const next=event.key==='Home'?0:event.key==='End'?buttons.length-1:index<0?(event.key==='ArrowUp'||event.key==='ArrowLeft'?buttons.length-1:0):(index+(event.key==='ArrowUp'||event.key==='ArrowLeft'?-1:1)+buttons.length)%buttons.length;
+        buttons[next]?.focus();
+      }
+      if(event.key==='Tab') {
+        const focusable=[$('#close-choice'),...buttons],current=focusable.indexOf(document.activeElement);
+        if(event.shiftKey&&(current<=0)){event.preventDefault();focusable.at(-1)?.focus();}
+        else if(!event.shiftKey&&(current===focusable.length-1||current<0)){event.preventDefault();focusable[0].focus();}
+      }
+    });
+    $('#settings-dialog').addEventListener('cancel',event=>{event.preventDefault();closeChoice();});
+    $('#settings-dialog').addEventListener('click',event=>{if(event.target===$('#settings-dialog'))closeChoice();});
+    $('#settings-dialog').addEventListener('close',()=>{if(!$('#settings-dialog').open)closeChoice();});
+    $('#close-choice').addEventListener('click',closeChoice);
+    $('#choice-shade').addEventListener('click',closeChoice);
+    for(const id of Object.keys(settingChoices))$('#pick-'+id).addEventListener('click',()=>openChoice(id));
     function buildPaletteChoices() {
       $('#palette-options').innerHTML='';
       for (const [key,palette] of Object.entries(palettes)) {
         const button=document.createElement('button');button.type='button';button.className='palette-choice';button.dataset.palette=key;
         palette.values.forEach((value,i)=>button.style.setProperty(['--top','--top-light','--top-dark','--bottom','--bottom-light','--bottom-dark'][i],value));
         button.innerHTML=`<span class="palette-pair" aria-hidden="true"><span class="token x">${tokenArtwork}</span><span class="token o">${tokenArtwork}</span></span>${palette.name}`;
-        button.addEventListener('click',()=>{$('#colors').value=key;applyPalette();savePreferences();});
+        button.addEventListener('click',()=>commitChoice('colors',key));
         $('#palette-options').append(button);
       }
     }
@@ -395,7 +504,7 @@
     function setupChanged() {
       $('#difficulty-field').hidden=$('#mode').value!=='computer';
       $('#difficulty').disabled=$('#mode').value!=='computer';
-      applyPalette();updateStarterHint();savePreferences();
+      applyPalette();updateSetupControls();updateStarterHint();savePreferences();
     }
     function drawBoard() {
       const n=rules.size(config.game), container=$('#board');container.innerHTML='';cells=[];
@@ -527,17 +636,20 @@
       for(const game of ['morris','twelve'])$('#select-'+game).setAttribute('aria-pressed',String($('#game').value===game));
     }
     function selectGame(game) {
+      closeChoice();
       if(!['morris','twelve'].includes(game))return;
       cancelComputer();active=false;$('#game').value=game;
       $('#selection-screen').hidden=true;$('#game-screen').hidden=true;$('#setup-screen').hidden=false;
       $('#audio-note').hidden=false;$('#setup-game-title').textContent=titles[game];updateSelection();setupChanged();$('#setup-title').focus();
     }
     function backToSelection() {
+      closeChoice();
       cancelComputer();active=false;selected=null;forced=null;
       $('#setup-screen').hidden=true;$('#game-screen').hidden=true;$('#selection-screen').hidden=false;
       $('#audio-note').hidden=true;updateSelection();$('#selection-title').focus();
     }
     function playGame() {
+      closeChoice();
       cancelComputer();config={game:$('#game').value,mode:$('#mode').value,level:$('#difficulty').value,side:$('#side').value};
       applyPalette();savePreferences();active=true;
       $('#audio-note').hidden=false;$('#selection-screen').hidden=true;$('#setup-screen').hidden=true;$('#game-screen').hidden=false;
@@ -548,6 +660,7 @@
       drawBoard();restartGame();$('#back-setup').focus();void unlockAudio();
     }
     function backToSetup() {
+      closeChoice();
       cancelComputer();active=false;selected=null;forced=null;
       $('#selection-screen').hidden=true;$('#game-screen').hidden=true;$('#setup-screen').hidden=false;
       document.title='Woodland Classics — Traditional Strategy Games';updateStarterHint();render();$('#setup-title').focus();
@@ -670,19 +783,19 @@
       const now=audioContext.currentTime,beat=60/72;
       // After an OS interruption, skip stale events instead of scheduling a burst.
       if(nextBeatTime<now-.3)nextBeatTime=now+.05;
-      const chords=[[50,57,62,65],[46,53,58,62],[48,55,60,64],[45,52,57,60]];
+      const chords=[[50,57,62,65],[46,53,58,62],[48,55,60,64],[45,52,57,60],[43,50,55,58],[46,53,58,65],[48,55,60,67],[45,52,57,64]];
       while(nextBeatTime<now+.35) {
-        const bar=Math.floor(musicStep/8)%4,phase=musicStep%8,chord=chords[bar];
+        const bar=Math.floor(musicStep/8)%8,phase=musicStep%8,chord=chords[bar];
         const frequency=midi=>440*2**((midi-69)/12);
         const midi=chord[[0,2,1,3,2,1,3,2][phase]]+(phase===3||phase===7?12:0);
         const group=voices.music,start=nextBeatTime;
         // Felt-piano fundamental and a very quiet plucked-string overtone.
         tone(frequency(midi),start,1.3,musicGain,{volume:.22,type:'sine',group,attack:.012});
         tone(frequency(midi)*2,start,.7,musicGain,{volume:.035,type:'triangle',group,attack:.008});
-        // Long overlapping chord envelopes produce a seamless 32-beat loop.
+        // Long overlapping chord envelopes produce a seamless 64-beat loop.
         if(phase===0)for(const pitch of [chord[0]-12,chord[1],chord[3]])
           tone(frequency(pitch),start,beat*8+1.0,musicGain,{volume:.055,group,attack:1.1});
-        nextBeatTime+=beat;musicStep=(musicStep+1)%32;
+        nextBeatTime+=beat;musicStep=(musicStep+1)%64;
       }
     }
     function syncMusic() {
@@ -704,6 +817,10 @@
       $('#music-toggle').textContent=musicEnabled?'♪ Music ON':'♪ Music OFF';
       $('#sound-toggle').setAttribute('aria-pressed',String(soundEnabled));$('#music-toggle').setAttribute('aria-pressed',String(musicEnabled));
       $('#setup-sound').checked=soundEnabled;$('#setup-music').checked=musicEnabled;
+      for(const [id,label,on] of [['setup-sound','Sound Effects',soundEnabled],['setup-music','Background Music',musicEnabled]]) {
+        $('#'+id).setAttribute('aria-checked',String(on));
+        $('#'+id).innerHTML=`<span>${label}<span class="switch-text">${on?'ON':'OFF'}</span></span><span class="switch-track" aria-hidden="true"></span>`;
+      }
       if(effectsGain)automate(effectsGain.gain,soundEnabled ? .42 : 0,.04);
       syncMusic();
     }
@@ -745,8 +862,8 @@
     window.addEventListener?.('pageshow',()=>{void unlockAudio();});
     $('#sound-toggle').addEventListener('click',()=>setSound(!soundEnabled));
     $('#music-toggle').addEventListener('click',()=>setMusic(!musicEnabled));
-    $('#setup-sound').addEventListener('change',()=>setSound($('#setup-sound').checked));
-    $('#setup-music').addEventListener('change',()=>setMusic($('#setup-music').checked));
+    $('#setup-sound').addEventListener('click',()=>setSound(!soundEnabled));
+    $('#setup-music').addEventListener('click',()=>setMusic(!musicEnabled));
     $('#select-morris').addEventListener('click',()=>selectGame('morris'));
     $('#select-twelve').addEventListener('click',()=>selectGame('twelve'));
     $('#back-selection').addEventListener('click',backToSelection);
@@ -756,7 +873,7 @@
     $('#next-match').addEventListener('click',()=>{if(gameOver)restartGame();});
     for (const id of ['mode','difficulty','colors','side']) $('#'+id).addEventListener('change',setupChanged);
     $('#reset-scores').addEventListener('click',()=>{scores[scoreKey()]={X:0,O:0,draw:0};saveResults();render();});
-    loadPreferences();loadResults();buildPaletteChoices();buildGamePreviews();updateSelection();applyPalette();updateAudioControls();
+    loadPreferences();loadResults();buildPaletteChoices();buildGamePreviews();updateSelection();applyPalette();updateSetupControls();updateAudioControls();
     $('#difficulty-field').hidden=$('#mode').value!=='computer';
     $('#difficulty').disabled=$('#mode').value!=='computer';
     drawBoard();restartGame();
