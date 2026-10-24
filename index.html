@@ -111,7 +111,7 @@
       <p class="score-note">Scores for this mode and difficulty · this page session</p>
       <button id="reset-scores">Reset scores</button>
     </section>
-    <p class="instructions"><strong>Three pieces. One straight line.</strong><br>All six pieces start on the board: three red (X) and three blue (O). Red starts. Select your piece and tap a highlighted adjacent empty point on a connecting line. No jumping. All three rows, columns and the two long diagonals are winning lines. A blocked player loses. Three repetitions of the same board and turn, or 100 movement turns, draw. In computer mode you play Red (X). Changing settings starts a new round.</p>
+    <p class="instructions"><strong>Win through the center.</strong><br>Red (X) starts across the top row; Blue (O) starts across the bottom row. The middle row is empty. These starting rows are not wins. Red starts. Select your piece and tap a highlighted adjacent empty point on a connecting line. No jumping. Only the middle row (3,4,5), middle column (1,4,7), and diagonals (0,4,8) and (2,4,6) win (indices run 0–8, left to right, top to bottom). The four outer rows/columns never win, but their connections still allow adjacent movement. A blocked player loses. Three repetitions of the same board and turn, or 100 movement turns, draw. In computer mode you play Red (X). Changing settings starts a new round.</p>
     <footer>No sign-ups. Just good company.</footer>
   </main>
   <script>
@@ -119,17 +119,19 @@
     const $ = selector => document.querySelector(selector);
     const cells = Array.from(document.querySelectorAll('.cell'));
     const status = $('#status'), mode = $('#mode'), difficulty = $('#difficulty');
-    const winningLines = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+    // Movement uses all drawn lines; wins use only the four central lines.
+    const connectionLines = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+    const winningLines = [[3,4,5],[1,4,7],[0,4,8],[2,4,6]];
     // Only consecutive points on a drawn line are adjacent. No jumping.
     const neighbors = Array.from({ length: 9 }, () => new Set());
-    winningLines.forEach(line => {
+    connectionLines.forEach(line => {
       for (let i = 0; i < 2; i++) {
         neighbors[line[i]].add(line[i + 1]);
         neighbors[line[i + 1]].add(line[i]);
       }
     });
-    // Rotating the board 180° swaps the colors: equal mobility, no starting line.
-    const STARTING_BOARD = Object.freeze(['X','O','','O','','X','','X','O']);
+    // Starting outer rows never count as wins under these custom rules.
+    const STARTING_BOARD = Object.freeze(['X','X','X','','','','O','O','O']);
     const playerName = mark => mark === 'X' ? 'Red (X)' : 'Blue (O)';
     let board, currentPlayer, gameOver;
     let selected = null, computerTimer = null, movementTurns = 0, history = new Map();
