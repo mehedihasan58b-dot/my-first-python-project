@@ -38,11 +38,11 @@ test('Three Men\'s Morris: exhaustive four-line detection and adjacency remain u
  rules.graphs.morris.forEach((a,i)=>assert.deepEqual(plain(a).sort((a,b)=>a-b),expected[i]));
  assert(rules.moves('morris',rules.initial('morris'),'X').every(m=>m.captured===null));
 });
-test('Forced capture, empty landing, valid straight segments, no multiple occupied jumps',()=>{
+test('Optional capture and slides, empty landing, valid straight segments, no multiple occupied jumps',()=>{
  const b=put([0,24],[1,7,23]);
  const legal=plain(rules.moves('twelve',b,'X'));
  assert(legal.some(m=>m.from===0&&m.to===2&&m.captured===1));
- assert(legal.every(m=>m.captured!==null),'Slides forbidden while a capture exists');
+ assert(legal.some(m=>m.captured===null&&m.from===24),'Another piece can slide even while a capture exists');
  assert(!legal.some(m=>m.from===0&&m.to===4),'Cannot jump two opponents');
  const next=rules.apply(b,legal[0],'X');assert.equal(next[legal[0].captured],'');
  assert(!rules.moves('twelve',put([0,2],[1]),'X').some(m=>m.from===0&&m.to===2));
@@ -63,18 +63,18 @@ test('Capture chains stay on one piece, change direction, and enumerate every co
    assert(rules.moves('twelve',state,'X',i?step.from:null).some(m=>m.from===step.from&&m.to===step.to));
    state=rules.apply(state,step,'X');
   }
-  assert.equal(rules.captures('twelve',state,'X',action.steps.at(-1).to).length,0);
+  assert(action.steps.length>=1,'Every capture prefix is a legal completed turn');
  }
  // Both a shorter complete chain and a longer one remain legal choices.
  assert(new Set(actions.map(a=>a.steps.length)).size>1);
 });
-test('Both AI sides and all levels obey mandatory complete capture sequences',()=>{
+test('Both AI sides and all levels obey legal optional capture sequences',()=>{
  for(const ai of ['X','O'])for(const level of ['easy','medium','hard']){
   const b=put([0,20],[1,7,13,21]);const state=ai==='X'?b:b.map(v=>v?rules.other(v):'');
   const steps=chooseAI(rules,{game:'twelve',board:state,turn:ai,level,budget:40});
   assert(steps.length>=1);let current=state,forced=null;
   for(const step of steps){assert(rules.moves('twelve',current,ai,forced).some(m=>JSON.stringify(m)===JSON.stringify(step)));current=rules.apply(current,step,ai);forced=step.to;}
-  assert.equal(rules.captures('twelve',current,ai,forced).length,0);
+  assert(rules.turns('twelve',state,ai).some(action=>JSON.stringify(action.steps)===JSON.stringify(steps)));
  }
 });
 test('Winners, blocked positions and repeat/quiet draws',()=>{
@@ -95,7 +95,7 @@ test('Full matches at every difficulty, both games and both computer sides remai
     assert(rules.moves(game,b,turn,forced).some(m=>JSON.stringify(m)===JSON.stringify(step)));
     b=rules.apply(b,step,turn);captured ||= step.captured!==null;forced=step.captured!==null?step.to:null;
    }
-   if(forced!==null)assert.equal(rules.captures(game,b,turn,forced).length,0);
+   if(forced!==null)assert.equal(game,'twelve');
    if(game==='morris')assert.equal(b.filter(Boolean).length,6);
    quiet=captured?0:quiet+1;turn=rules.other(turn);const key=rules.key(b,turn);seen.set(key,(seen.get(key)||0)+1);
   }
@@ -178,8 +178,8 @@ test('Human capture chain locks same piece, counts captures immediately and swit
   assert(t.get('#capture-count').textContent.includes('captured 9'));
   t.call('makeMove',20);assert.equal(t.run('selected'),2,'Cannot switch piece during chain');
   t.call('makeMove',3);assert.equal(t.run('forced'),2,'Cannot end chain with a slide');
-  t.call('makeMove',12);assert.equal(t.run('forced'),12);assert.equal(t.run('board[7]'),'');
-  t.call('makeMove',14);assert.equal(t.run('forced'),null);assert.equal(t.run('turn'),'O');assert.equal(t.run('turnNumber'),1);assert.equal(t.run("board.filter(v=>v==='O').length"),1);
+  t.call('continueCapturing');t.call('makeMove',12);assert.equal(t.run('forced'),12);assert.equal(t.run('board[7]'),'');
+  t.call('continueCapturing');t.call('makeMove',14);assert.equal(t.run('forced'),null);assert.equal(t.run('turn'),'O');assert.equal(t.run('turnNumber'),1);assert.equal(t.run("board.filter(v=>v==='O').length"),1);
   assert.equal(t.run('quiet'),0);assert(t.get('#capture-count').textContent.includes('captured 11'));
   t.call('restartGame');assert.equal(t.run('board.filter(Boolean).length'),24);assert.equal(t.run('forced'),null);
 });
@@ -192,15 +192,15 @@ test('Human invalid/occupied/nonexistent moves never change game state; Morris c
     assert.equal(t.run('JSON.stringify(board)'),before);
   }
 });
-test('Computer applies full chains with visible intermediate jumps, for every level and either side',()=>{
+test('Computer may take a slide or optional capture prefix, then ends the turn legally at every level/side',()=>{
   for(const side of ['X','O'])for(const level of ['easy','medium','hard']){
     const t=browserHarness({worker:true});t.get('#game').value='twelve';t.get('#mode').value='computer';t.get('#difficulty').value=level;t.get('#side').value=rules.other(side);t.call('playGame');t.call('cancelComputer');
     const fixture=put([0],[1,7,13]);t.c.fixture=side==='X'?fixture:fixture.map(v=>v?rules.other(v):'');
     t.run(`board=fixture.slice();turn='${side}';gameOver=false;history=new Map();scheduleComputer()`);
     t.flush();assert.equal(t.workerEvents.length,1);t.workerEvents.shift()();
-    assert.equal(t.run('forced'),2);assert.equal(t.run('turn'),side);assert.equal(t.run('board[1]'),'');
-    t.flush();assert.equal(t.run('forced'),12);assert.equal(t.run('board[7]'),'');
-    t.flush();assert.equal(t.run('gameOver'),true);assert.equal(t.run(`currentScores().${side}`),1);assert.equal(t.run('board[13]'),'');assert.equal(t.urls.size,0);
+    let count=0;while(t.run('turn')===side&&!t.run('gameOver')&&count++<15)t.flush();
+    assert(count<15);assert(t.run('turn')===rules.other(side)||t.run('gameOver'));
+    assert.equal(t.run('forced'),null);assert.equal(t.run('turnNumber'),1);assert.equal(t.urls.size,0);
   }
 });
 test('Completed-match alternation, Next Match, unfinished restart, isolated scores and stale worker cancellation',()=>{
@@ -222,7 +222,7 @@ test('Completed-match alternation, Next Match, unfinished restart, isolated scor
 test('AI Worker cancellation/fallback and strict search budgets remain responsive',()=>{
   const t=browserHarness();t.get('#game').value='twelve';t.get('#mode').value='computer';t.call('playGame');t.call('finish',{winner:'draw',reason:'test'});t.call('restartGame');
   const start=performance.now();t.flush();assert(performance.now()-start<500);assert.equal(t.run('turn'),'X');
-  const fallback=chooseAI(rules,{game:'twelve',board:put([0],[1,7,13]),turn:'X',level:'hard',budget:0});assert.equal(fallback.length,3,'Even an expired search must produce a complete legal chain');
+  const fallback=chooseAI(rules,{game:'twelve',board:put([0],[1,7,13]),turn:'X',level:'hard',budget:0});assert(fallback.length>=1&&fallback.length<=3,'Expired search still returns a legal optional turn');
 });
 test('Audio effects, distinct capture sound, independent sound/music, mobile unlock and saved settings',async()=>{
   const t=browserHarness();assert.equal(t.contexts(),1);await t.call('setMusic',false);t.documentEvents.pointerdown[0]();await Promise.resolve();assert.equal(t.contexts(),1);
@@ -352,7 +352,7 @@ test('Polished effects cover cards, buttons, selection, moves, invalid attempts,
   }
   t.c.fixture=put([0],[1,7,13]);t.run("cancelComputer();config.mode='pvp';board=fixture.slice();turn='X';gameOver=false;forced=null;history=new Map();render()");
   for(const [from,to,captured] of [[0,2,1],[2,12,7],[12,14,13]]){
-    ctx.currentTime+=.25;const count=t.notes.length;t.call('commitStep',move(from,to,captured));assert(t.notes.length>=count+3,'Every jump creates its capture accent');
+    ctx.currentTime+=.25;if(t.run('captureDecision'))t.call('continueCapturing');const count=t.notes.length;t.call('commitStep',move(from,to,captured));assert(t.notes.length>=count+3,'Every jump creates its capture accent');
   }
   assert.equal(t.run('gameOver'),true);
   const lastCapture=t.oscillators.slice(-7,-4),win=t.oscillators.slice(-4);assert(win[0].startTime>lastCapture[0].startTime+.12,'Victory follows the final capture');
@@ -418,4 +418,57 @@ test('Golden audio switches synchronize with gameplay, retain saved preferences 
   const restored=browserHarness({preferences:JSON.parse(t.stored())});assert.equal(restored.get('#setup-music').attributes['aria-checked'],'false');assert.equal(restored.intervals.size,0);
   await t.get('#setup-music').events.click();t.call('playGame');const active=[...t.intervals.keys()][0];t.call('backToSetup');t.call('openChoice','colors');t.call('closeChoice');assert.equal([...t.intervals.keys()][0],active);
   assert(t.get('#starter-hint').textContent.includes('Match 1'));assert(html.includes('seamless 64-beat loop'));assert.equal(t.run('musicVolume'),.18);
+});
+
+test('Twelve Guti can slide another piece instead of capturing, without removing anything',()=>{
+  const t=browserHarness();t.call('selectGame','twelve');t.call('playGame');t.c.fixture=put([0,20],[1,7,13,21]);t.run("board=fixture.slice();turn='X';history=new Map();render()");
+  assert(rules.captures('twelve',plain(t.run('board')),'X').length>0);
+  t.call('makeMove',20);t.call('makeMove',15);assert.equal(t.run('board[15]'),'X');assert.equal(t.run('board[20]'),'');assert.equal(t.run("board.filter(v=>v==='O').length"),4);
+  assert.equal(t.run('turn'),'O');assert.equal(t.run('turnNumber'),1);assert.equal(t.run('quiet'),1);assert.equal(t.get('#capture-choice').hidden,true);
+});
+test('Every extra human capture requires a choice; End Turn works after one or two jumps and is idempotent',()=>{
+  for(const jumpCount of [1,2]){
+    const t=browserHarness();t.call('selectGame','twelve');t.call('playGame');t.c.fixture=put([0,20],[1,7,13,21]);t.run("board=fixture.slice();turn='X';quiet=99;history=new Map();render()");
+    assert.equal(t.call('endCaptureTurn'),false,'Cannot pass without first capturing');
+    t.call('makeMove',0);t.call('makeMove',2);assert.equal(t.run('captureDecision'),true);assert.equal(t.get('#capture-choice').hidden,false);assert.equal(t.document.activeElement,t.get('#continue-capturing'));
+    const first=t.run('JSON.stringify(board)');assert.equal(t.call('commitStep',move(2,12,7)),false);t.call('makeMove',20);assert.equal(t.run('JSON.stringify(board)'),first);
+    if(jumpCount===2){t.get('#continue-capturing').events.click();assert.equal(t.run('captureDecision'),false);t.call('makeMove',20);assert.equal(t.run('selected'),2);t.call('makeMove',12);assert.equal(t.run('captureDecision'),true);assert.equal(t.run('forced'),12);}
+    const final=t.run('JSON.stringify(board)');assert.equal(t.run('turn'),'X');assert.equal(t.run('turnNumber'),0);
+    t.get('#end-capture-turn').events.click();assert.equal(t.run('turn'),'O');assert.equal(t.run('turnNumber'),1);assert.equal(t.run('quiet'),0);assert.equal(t.run('forced'),null);assert.equal(t.run('history.size'),1);assert.equal(t.run('JSON.stringify(board)'),final);
+    assert.equal(t.get('#capture-choice').hidden,true);assert.equal(t.call('endCaptureTurn'),false);assert.equal(t.run('turn'),'O');assert.equal(t.run('turnNumber'),1);assert.equal(t.run('completed.twelve'),0);
+  }
+});
+test('Continued capture cannot switch piece or slide, auto-ends when exhausted, and restart cancels choices',()=>{
+  const t=browserHarness();t.call('selectGame','twelve');t.call('playGame');t.c.fixture=put([0,20],[1,7,13,21]);t.run("board=fixture.slice();turn='X';history=new Map();render()");
+  for(const step of [move(0,2,1),move(2,12,7),move(12,14,13)]){
+    if(t.run('captureDecision'))t.call('continueCapturing');
+    if(t.run('forced')!==null){const old=t.run('JSON.stringify(board)');assert.equal(t.call('commitStep',move(20,15)),false);assert.equal(t.call('commitStep',move(step.from,step.from+1)),false);assert.equal(t.run('JSON.stringify(board)'),old);}
+    assert.equal(t.call('commitStep',step),true);
+  }
+  assert.equal(t.run('turn'),'O');assert.equal(t.run('turnNumber'),1);assert.equal(t.get('#capture-choice').hidden,true);assert.equal(t.run('captureDecision'),false);
+  t.call('restartGame');t.c.fixture=put([0],[1,7,13]);t.run("board=fixture.slice();turn='X';render()");t.call('commitStep',move(0,2,1));assert.equal(t.run('captureDecision'),true);
+  t.call('restartGame');assert.equal(t.run('captureDecision'),false);assert.equal(t.run('board.filter(Boolean).length'),24);assert.equal(t.get('#capture-choice').hidden,true);
+});
+test('Turn enumeration includes all optional prefixes and a stop action only inside Twelve Guti chains',()=>{
+  const b=put([0],[1,7,13]),actions=rules.turns('twelve',b,'X');
+  for(const length of [1,2,3])assert(actions.some(a=>a.steps.length===length&&a.steps[0].captured===1));
+  assert(actions.some(a=>a.steps[0].captured===null));assert(!actions.some(a=>a.steps.length===0),'No skipping an ordinary turn');
+  const after=rules.apply(b,move(0,2,1),'X'),continuations=rules.turns('twelve',after,'X',2);
+  assert(continuations.some(a=>a.steps.length===0));assert(continuations.some(a=>a.steps.length===1));assert(continuations.some(a=>a.steps.length===2));
+  assert(continuations.every(a=>a.steps.length===0||a.steps[0].from===2));
+  assert(rules.turns('morris',rules.initial('morris'),'X').every(a=>a.steps.length===1&&a.steps[0].captured===null));
+});
+test('Easy can decline a capture or stop; Medium and Hard reject capture traps and choose End Turn',()=>{
+  const trap=put([0],[1,3,4]),stop=put([2],[7,17,22]);
+  const random=vm.runInContext('Math.random',context);
+  try{
+    vm.runInContext('Math.random=()=>.9999',context);assert.equal(chooseAI(rules,{game:'twelve',board:trap,turn:'X',level:'easy'})[0].captured,null);
+    vm.runInContext('Math.random=()=>0',context);assert.deepEqual(plain(chooseAI(rules,{game:'twelve',board:stop,turn:'X',forced:2,level:'easy'})),[]);
+  }finally{context.originalRandom=random;vm.runInContext('Math.random=originalRandom',context);}
+  for(const level of ['medium','hard']){
+    const steps=chooseAI(rules,{game:'twelve',board:trap,turn:'X',level,budget:100});assert.equal(steps.length,1);assert.equal(steps[0].captured,null,'Capture would allow immediate elimination');
+    assert.deepEqual(plain(chooseAI(rules,{game:'twelve',board:stop,turn:'X',forced:2,level,budget:100})),[]);
+    const t=browserHarness({worker:true});t.call('selectGame','twelve');t.get('#mode').value='computer';t.get('#difficulty').value=level;t.get('#side').value='O';t.call('playGame');t.call('cancelComputer');t.c.fixture=stop;t.run("board=fixture.slice();turn='X';forced=2;captureDecision=true;captureInTurn=true;gameOver=false;history=new Map();scheduleComputer()");
+    t.flush();t.workerEvents.shift()();assert.equal(t.run('turn'),'O');assert.equal(t.run('forced'),null);assert.equal(t.run('turnNumber'),1);assert.equal(t.run('board[2]'),'X');assert.equal(t.run('board[7]'),'O');
+  }
 });

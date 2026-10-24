@@ -156,6 +156,10 @@
     .choice-dialog .palette-choice[aria-pressed="true"]::after { content: '◆'; position: absolute; top: 7px; right: 7px; color: #ffdc8b; }
     @media(max-width: 380px) { .gold-switch { padding: 10px 8px; gap: 5px; font-size: 10px; } .switch-track { width: 42px; } .gold-switch[aria-checked="true"] .switch-track::before { transform: translateX(14px); } .choice-dialog { padding: 21px 16px; } }
     @media(prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+    .capture-choice { max-width: 640px; margin: 18px auto 0; padding: 18px; text-align: center; border-radius: 15px; }
+    .capture-choice p { color: #efcf94; font: 13px/1.6 system-ui,sans-serif; margin-bottom: 14px; }
+    .capture-choice > div { display: flex; justify-content: center; flex-wrap: wrap; gap: 12px; }
+    .capture-choice button { min-height: 48px; }
   </style>
 </head>
 <body>
@@ -196,6 +200,7 @@
         <div id="board" class="board" role="group" aria-label="Game board"></div>
       </div></div>
       <p id="status" role="status" aria-live="polite" aria-atomic="true"></p><p id="phase"></p>
+      <div id="capture-choice" class="capture-choice wood-panel" hidden role="group" aria-label="Capture decision"><p>Another capture is available. Continue with this piece, or end your turn.</p><div><button id="continue-capturing" class="gold-button">Continue Capturing</button><button id="end-capture-turn" class="secondary-button">End Turn</button></div></div>
       <div class="game-actions"><button id="back-setup" class="secondary-button">← Back to Setup</button><button id="restart" class="gold-button">↻ Restart</button><button id="next-match" class="gold-button" hidden>Next Match →</button></div>
       <p class="score-note">Saved scores for each game, mode, difficulty and side</p><button id="reset-scores">Reset scores</button>
       <details><summary>How to play</summary><p id="game-rules"></p></details>
@@ -244,8 +249,8 @@
       function moves(game,b,turn,forced = null) {
         if (line(game,b)) return [];
         const jumps = captures(game,b,turn,forced);
-        if (forced !== null || jumps.length) return jumps;
-        return b.flatMap((v,from) => v !== turn ? [] : graphs[game][from].filter(to => !b[to]).map(to => ({from,to,captured:null})));
+        if (forced !== null) return jumps;
+        return [...jumps,...b.flatMap((v,from) => v !== turn ? [] : graphs[game][from].filter(to => !b[to]).map(to => ({from,to,captured:null})))];
       }
       function apply(b,move,turn) {
         const next = b.slice(); next[move.from] = ''; next[move.to] = turn;
@@ -255,13 +260,13 @@
       // Enumerate complete turns, not individual jumps, for search evaluation.
       // A capture removes one enemy each time, so recursion cannot cycle.
       function turns(game,b,turn,forced = null, visit = () => {}) {
-        const result = [];
+        const result = game==='twelve'&&forced!==null?[{steps:[],board:b.slice()}]:[];
         function extend(state, move, path) {
           visit();
           const next = apply(state,move,turn), steps = [...path,move];
           const more = move.captured === null ? [] : captures(game,next,turn,move.to);
+          result.push({steps,board:next}); // Every prefix is a legal voluntary end of turn.
           if (more.length) more.forEach(m => extend(next,m,steps));
-          else result.push({steps,board:next});
         }
         moves(game,b,turn,forced).forEach(m => extend(b,m,[]));
         return result;
@@ -302,15 +307,17 @@
       let nodes = 0;
       const interrupted = {};
       function check() { if (++nodes > 30000 || clock() > deadline) throw interrupted; }
-      // Legal fallback: even an interrupted search finishes a capture chain.
+      // Legal fallback may stop after any capture or decline a capture entirely.
       const firstMoves = rules.moves(game,board,turn,forced);
-      if (!firstMoves.length) return null;
+      if (!firstMoves.length) return game==='twelve'&&forced!==null?[]:null;
       function randomTurn() {
         let b = board, legal = firstMoves, steps = [];
+        if(game==='twelve'&&forced!==null&&Math.random()<.35)return {steps,board:b};
         while (legal.length) {
           const move = legal[Math.floor(Math.random()*legal.length)]; steps.push(move);
           b = rules.apply(b,move,turn);
           legal = move.captured === null ? [] : rules.captures(game,b,turn,move.to);
+          if(legal.length&&Math.random()<.5)break;
         }
         return {steps,board:b};
       }
@@ -320,7 +327,7 @@
         const value = action => rules.line(game,action.board) ? 100000 : (action.steps.filter(s=>s.captured!==null).length*500+rules.evaluate(game,action.board,ai));
         return value(b)-value(a);
       });
-      function nextQuiet(action,q) { return action.steps.some(s=>s.captured!==null) ? 0 : q+1; }
+      function nextQuiet(action,q,continuing=false) { return continuing||action.steps.some(s=>s.captured!==null) ? 0 : q+1; }
       function search(b,player,depth,alpha,beta,q,ply) {
         check();
         const result = rules.outcome(game,b,player,seen,q);
@@ -351,7 +358,7 @@
             const next = rules.other(turn), k = rules.key(action.board,next), old = seen.get(k)||0;
             seen.set(k,old+1);
             let value;
-            try { value = search(action.board,next,depth-1,-Infinity,Infinity,nextQuiet(action,quiet),1); }
+            try { value = search(action.board,next,depth-1,-Infinity,Infinity,nextQuiet(action,quiet,forced!==null),1); }
             finally { if (old) seen.set(k,old); else seen.delete(k); }
             if (value > high) { high=value;candidate=action; }
           }
@@ -374,6 +381,7 @@
       orangesky:{name:'Orange vs Sky Blue',names:['Orange','Sky Blue'],values:['#d66314','#ffba64','#7a2708','#2695c3','#91e5ff','#07415c']}
     };
     let config = {game:'morris',mode:'pvp',level:'easy',side:'X'};
+    let captureDecision=false,aiPlanReady=false;
     let currentPalette='redblue', active=false, board=[], turn='X', selected=null, forced=null, gameOver=false;
     let quiet=0, turnNumber=0, captureInTurn=false, history=new Map(), lastMove=null, lastCaptured=null, lastCapturedColor=null;
     const scores={}, completed={morris:0,twelve:0};
@@ -533,7 +541,7 @@
         if (lastCaptured===i) cell.classList.add('captured');
         cell.innerHTML=board[i]?`<span class="token ${board[i].toLowerCase()}${lastMove===i?' moved':''}" aria-hidden="true">${tokenArtwork}</span>`:'';
         if(lastCaptured===i&&lastCapturedColor)cell.innerHTML+=`<span class="token ${lastCapturedColor.toLowerCase()} capture-ghost" aria-hidden="true">${tokenArtwork}</span>`;
-        cell.disabled=!active||gameOver||computer||!(legal.some(m=>m.from===i)||targets.includes(i));
+        cell.disabled=!active||gameOver||computer||(config.game==='twelve'&&captureDecision)||!(legal.some(m=>m.from===i)||targets.includes(i));
         cell.setAttribute('aria-label',`Row ${Math.floor(i/n)+1}, column ${i%n+1}, ${board[i]?playerName(board[i]):'empty'}${selected===i?', selected':''}${targets.includes(i)?', legal destination':''}`);
         cell.setAttribute('aria-pressed',String(selected===i));
       });
@@ -547,11 +555,15 @@
       $('#capture-count').hidden=config.game!=='twelve';
       $('#capture-count').textContent=`${ownerName('X')} captured ${12-board.filter(v=>v==='O').length} · ${ownerName('O')} captured ${12-board.filter(v=>v==='X').length}`;
       if (!gameOver) {
-        const instruction=forced!==null?'continue capturing with the same piece':legal.some(m=>m.captured!==null)?(selected===null?'capture required — select a capturing piece':'choose a highlighted capture'):selected===null?'select your piece':'choose a highlighted adjacent point';
+        const instruction=forced!==null?(captureDecision?'choose Continue Capturing or End Turn':'capture again with the same piece, or End Turn'):legal.some(m=>m.captured!==null)?(selected===null?'select any piece — captures are optional':'choose a highlighted move or capture'):selected===null?'select your piece':'choose a highlighted adjacent point';
         $('#status').textContent=`${ownerName(turn)} · ${playerName(turn)}${computer?' is thinking…':"'s turn — "+instruction}`;
       }
       $('#phase').textContent=`Match ${completed[config.game]+(gameOver?0:1)} · Turn ${turnNumber+1}${config.game==='morris'?` · ${quiet}/100 moves`:` · ${board.filter(Boolean).length} pieces remaining`}`;
       $('#next-match').hidden=!gameOver;
+      $('#capture-choice').hidden=config.game!=='twelve'||forced===null||!active||gameOver||computer;
+      $('#continue-capturing').hidden=!captureDecision;
+      $('#continue-capturing').disabled=!captureDecision||computer;
+      $('#end-capture-turn').disabled=forced===null||computer;
       lastMove=null;lastCaptured=null;lastCapturedColor=null;
     }
     function finish(result) {
@@ -562,7 +574,7 @@
       $('#status').textContent=result.winner==='draw'?`Draw! ${result.reason}`:`${ownerName(result.winner)} wins! ${result.reason}`;
     }
     function commitStep(move,fromComputer=false) {
-      if (!active||gameOver||isComputerTurn()!==fromComputer||!move) return false;
+      if (!active||gameOver||isComputerTurn()!==fromComputer||!move||(captureDecision&&!fromComputer)) return false;
       const legal=rules.moves(config.game,board,turn,forced);
       const step=legal.find(m=>m.from===move.from&&m.to===move.to&&m.captured===move.captured);
       if (!step) return false;
@@ -571,17 +583,29 @@
       captureInTurn ||= step.captured!==null;
       if(step.captured!==null)playSound('capture');
       if (step.captured!==null && rules.captures(config.game,board,turn,step.to).length) {
-        forced=step.to;selected=step.to;render();scheduleComputer();return true;
+        forced=step.to;selected=step.to;captureDecision=true;render();if(!fromComputer)$('#continue-capturing').focus();scheduleComputer();return true;
       }
-      forced=null;selected=null;turn=rules.other(turn);turnNumber++;
-      quiet=captureInTurn?0:quiet+1;captureInTurn=false;aiPlan=[];
+      resolveTurn(step.captured===null);return true;
+    }
+    function resolveTurn(normalMove=false) {
+      forced=null;selected=null;captureDecision=false;turn=rules.other(turn);turnNumber++;
+      quiet=captureInTurn?0:quiet+1;captureInTurn=false;aiPlan=[];aiPlanReady=false;
       const key=rules.key(board,turn);history.set(key,(history.get(key)||0)+1);
       const result=rules.outcome(config.game,board,turn,history,quiet);
-      if (result) finish(result);else if(step.captured===null)playSound('move');
-      render();scheduleComputer();return true;
+      if(result)finish(result);else if(normalMove)playSound('move');
+      render();scheduleComputer();
+    }
+    function continueCapturing() {
+      if(!active||gameOver||config.game!=='twelve'||forced===null||isComputerTurn()||!captureDecision)return;
+      captureDecision=false;selected=forced;playSound('click');render();
+      const next=rules.captures(config.game,board,turn,forced)[0];if(next)cells[next.to]?.focus();
+    }
+    function endCaptureTurn(fromComputer=false) {
+      if(!active||gameOver||config.game!=='twelve'||forced===null||isComputerTurn()!==fromComputer)return false;
+      resolveTurn();return true;
     }
     function makeMove(index) {
-      if (!active||gameOver||isComputerTurn()) return;
+      if (!active||gameOver||isComputerTurn()||captureDecision) return;
       const legal=rules.moves(config.game,board,turn,forced);
       if (legal.some(m=>m.from===index)) {
         if (forced===null){selected=selected===index?null:index;playSound('select');}
@@ -594,18 +618,19 @@
       if (aiWorker) aiWorker.terminate();aiWorker=null;
       if (aiURL) URL.revokeObjectURL(aiURL);aiURL=null;
     }
-    function cancelComputer() { aiVersion++;clearTimeout(aiTimer);aiTimer=null;disposeWorker();aiPlan=[]; }
+    function cancelComputer() { aiVersion++;clearTimeout(aiTimer);aiTimer=null;disposeWorker();aiPlan=[];aiPlanReady=false; }
     function scheduleComputer() {
       if (!active||gameOver||!isComputerTurn()||aiTimer!==null||aiWorker) return;
       const version=aiVersion;
       aiTimer=setTimeout(()=>{
         aiTimer=null;if (version!==aiVersion||!active||gameOver||!isComputerTurn()) return;
+        if(forced!==null&&aiPlanReady&&!aiPlan.length){endCaptureTurn(true);return;}
         if (aiPlan.length) { if (!commitStep(aiPlan.shift(),true)) { aiPlan=[];scheduleComputer(); } return; }
         const job={game:config.game,board:board.slice(),turn,forced,level:config.level,history:[...history],quiet,budget:config.level==='hard'?140:65};
         const accept=steps=>{
           if (version!==aiVersion||!active||gameOver||!isComputerTurn()) return;
-          disposeWorker();aiPlan=steps||[];
-          if (!aiPlan.length) { const result=rules.outcome(config.game,board,turn,history,quiet);if(result){finish(result);render();}return; }
+          disposeWorker();aiPlan=steps||[];aiPlanReady=true;
+          if (!aiPlan.length) { if(forced!==null){endCaptureTurn(true);return;}const result=rules.outcome(config.game,board,turn,history,quiet);if(result){finish(result);render();}return; }
           if (!commitStep(aiPlan.shift(),true)) {aiPlan=[];scheduleComputer();}
         };
         const fallback=()=>{if(version!==aiVersion)return;disposeWorker();accept(chooseAI(rules,{...job,budget:20}));};
@@ -619,7 +644,7 @@
     }
     function restartGame() {
       cancelComputer();board=rules.initial(config.game);turn=completed[config.game]%2===0?config.side:rules.other(config.side);
-      gameOver=false;forced=null;selected=null;quiet=0;turnNumber=0;captureInTurn=false;lastMove=null;lastCaptured=null;lastCapturedColor=null;
+      gameOver=false;forced=null;selected=null;captureDecision=false;aiPlanReady=false;quiet=0;turnNumber=0;captureInTurn=false;lastMove=null;lastCaptured=null;lastCapturedColor=null;
       history=new Map([[rules.key(board,turn),1]]);updateStarterHint();render();scheduleComputer();
       if(active)playSound('newmatch');
     }
@@ -644,7 +669,7 @@
     }
     function backToSelection() {
       closeChoice();
-      cancelComputer();active=false;selected=null;forced=null;
+      cancelComputer();active=false;selected=null;forced=null;captureDecision=false;
       $('#setup-screen').hidden=true;$('#game-screen').hidden=true;$('#selection-screen').hidden=false;
       $('#audio-note').hidden=true;updateSelection();$('#selection-title').focus();
     }
@@ -656,12 +681,12 @@
       $('#game-title').textContent=titles[config.game];document.title=titles[config.game]+' — Woodland Classics';
       $('#game-rules').textContent=config.game==='morris'?
         'Start with three pieces on the top row and three on the bottom row. No placement or captures. Move to a directly connected adjacent empty point. Only the middle row (3,4,5), middle column (1,4,7), and diagonals (0,4,8) and (2,4,6) win. Outer lines never win. A blocked player loses. The same board and turn three times, or 100 moves, draw. Player 1 starts match 1; starters alternate only after completed matches. Restarting an unfinished match does not advance the sequence.':
-        'This reference board has 25 intersections: all horizontal/vertical links and diagonals only at alternating intersections. Twelve pieces per side; only the center starts empty. Move to a connected adjacent empty point. If any capture is available, you must capture: jump over one adjacent opponent along two straight connected segments into the empty point beyond. Remove it immediately. Continue all available jumps with that same piece, changing direction if needed. You may choose any capture branch; longest capture is not required. Win when the opponent has no pieces or legal moves. Three repeated board-and-turn states or 100 turns without a capture draw. Completed matches alternate the starter.';
+        'This reference board has 25 intersections: all horizontal/vertical links and diagonals only at alternating intersections. Twelve pieces per side; only the center starts empty. Move to a connected adjacent empty point. Capturing is always optional; you may instead move any piece normally. To capture, jump over one adjacent opponent along two straight connected segments into the empty point beyond. Remove it immediately. After each jump with another capture available, choose Continue Capturing or End Turn. Continuing uses only that same piece; you may change direction. Each additional jump offers the choice again. If no further jump exists, the turn ends automatically. You may choose any capture branch; longest capture is not required. Win when the opponent has no pieces or legal moves. Three repeated board-and-turn states or 100 turns without a capture draw. Completed matches alternate the starter.';
       drawBoard();restartGame();$('#back-setup').focus();void unlockAudio();
     }
     function backToSetup() {
       closeChoice();
-      cancelComputer();active=false;selected=null;forced=null;
+      cancelComputer();active=false;selected=null;forced=null;captureDecision=false;
       $('#selection-screen').hidden=true;$('#game-screen').hidden=true;$('#setup-screen').hidden=false;
       document.title='Woodland Classics — Traditional Strategy Games';updateStarterHint();render();$('#setup-title').focus();
     }
@@ -870,6 +895,8 @@
     $('#play-game').addEventListener('click',playGame);
     $('#back-setup').addEventListener('click',backToSetup);
     $('#restart').addEventListener('click',restartGame);
+    $('#continue-capturing').addEventListener('click',continueCapturing);
+    $('#end-capture-turn').addEventListener('click',()=>endCaptureTurn());
     $('#next-match').addEventListener('click',()=>{if(gameOver)restartGame();});
     for (const id of ['mode','difficulty','colors','side']) $('#'+id).addEventListener('change',setupChanged);
     $('#reset-scores').addEventListener('click',()=>{scores[scoreKey()]={X:0,O:0,draw:0};saveResults();render();});
