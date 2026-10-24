@@ -472,3 +472,13 @@ test('Easy can decline a capture or stop; Medium and Hard reject capture traps a
     t.flush();t.workerEvents.shift()();assert.equal(t.run('turn'),'O');assert.equal(t.run('forced'),null);assert.equal(t.run('turnNumber'),1);assert.equal(t.run('board[2]'),'X');assert.equal(t.run('board[7]'),'O');
   }
 });
+
+test('Capture choice floats inside the board frame, hides on Continue, and returns after the next jump',()=>{
+  const frame=html.indexOf('<div class="board-frame"'),overlay=html.indexOf('id="capture-choice"'),status=html.indexOf('<p id="status"');
+  assert(frame<overlay&&overlay<status,'Overlay belongs inside the board, before below-board status');
+  assert(html.includes('.capture-overlay { position: absolute; inset: 8px; z-index: 5; display: grid; place-items: center;'));
+  const t=browserHarness();t.call('selectGame','twelve');t.call('playGame');t.c.fixture=put([0,20],[1,7,13,21]);t.run("board=fixture.slice();turn='X';history=new Map();render()");
+  t.call('makeMove',0);t.call('makeMove',2);assert.equal(t.get('#capture-choice').hidden,false);assert.equal(t.document.activeElement,t.get('#continue-capturing'));
+  t.get('#continue-capturing').events.click();assert.equal(t.get('#capture-choice').hidden,true);assert.equal(t.run('forced'),2);
+  t.call('makeMove',12);assert.equal(t.get('#capture-choice').hidden,false);t.get('#end-capture-turn').events.click();assert.equal(t.get('#capture-choice').hidden,true);assert.equal(t.run('turn'),'O');
+});

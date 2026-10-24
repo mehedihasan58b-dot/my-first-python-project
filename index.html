@@ -56,7 +56,7 @@
     .draw-badge { color: #ecd5ae; font: 13px system-ui,sans-serif; }
     #status { text-align: center; color: #ffe2a1; font: 600 clamp(13px,2vw,16px)/1.5 system-ui,sans-serif; margin: 14px 0 5px; min-height: 24px; }
     #phase { text-align: center; font: 11px system-ui,sans-serif; color: #c4a786; margin-bottom: 18px; }
-    .board-frame { width: min(100%, 780px); margin: auto; padding: clamp(13px,3vw,26px); border: 2px solid #d19c66; border-radius: clamp(20px,4vw,38px); background: repeating-linear-gradient(5deg,#ffffff08 0 1px,transparent 2px 7px), linear-gradient(125deg,#9b563a,#452014 23%,#9b5435 50%,#38160e 80%,#9b563a); box-shadow: inset 0 0 0 5px #4a2116,inset 0 0 0 8px #b7774f,0 10px 0 #281007,0 18px 35px #0009; }
+    .board-frame { position: relative; width: min(100%, 780px); margin: auto; padding: clamp(13px,3vw,26px); border: 2px solid #d19c66; border-radius: clamp(20px,4vw,38px); background: repeating-linear-gradient(5deg,#ffffff08 0 1px,transparent 2px 7px), linear-gradient(125deg,#9b563a,#452014 23%,#9b5435 50%,#38160e 80%,#9b563a); box-shadow: inset 0 0 0 5px #4a2116,inset 0 0 0 8px #b7774f,0 10px 0 #281007,0 18px 35px #0009; }
     .board-wrap { position: relative; aspect-ratio: 1; border: 3px solid #42200d; border-radius: 12px; overflow: hidden; background: #e6ad63; box-shadow: inset 0 0 0 3px #ffdc98,inset 0 0 25px #8e4c1980; }
     #connections { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
     .board { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(var(--board-size,3),1fr); grid-template-rows: repeat(var(--board-size,3),1fr); }
@@ -156,7 +156,8 @@
     .choice-dialog .palette-choice[aria-pressed="true"]::after { content: '◆'; position: absolute; top: 7px; right: 7px; color: #ffdc8b; }
     @media(max-width: 380px) { .gold-switch { padding: 10px 8px; gap: 5px; font-size: 10px; } .switch-track { width: 42px; } .gold-switch[aria-checked="true"] .switch-track::before { transform: translateX(14px); } .choice-dialog { padding: 21px 16px; } }
     @media(prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
-    .capture-choice { max-width: 640px; margin: 18px auto 0; padding: 18px; text-align: center; border-radius: 15px; }
+    .capture-overlay { position: absolute; inset: 8px; z-index: 5; display: grid; place-items: center; border-radius: 18px; background: #160c0670; backdrop-filter: blur(1px); padding: 12px; }
+    .capture-choice { width: min(100%,420px); max-height: 100%; overflow-y: auto; margin: 0; padding: 18px; text-align: center; border-radius: 15px; }
     .capture-choice p { color: #efcf94; font: 13px/1.6 system-ui,sans-serif; margin-bottom: 14px; }
     .capture-choice > div { display: flex; justify-content: center; flex-wrap: wrap; gap: 12px; }
     .capture-choice button { min-height: 48px; }
@@ -198,9 +199,11 @@
       <div class="board-frame"><div class="board-wrap">
         <svg id="connections" viewBox="0 0 300 300" aria-hidden="true"><defs><filter id="grain"><feTurbulence type="fractalNoise" baseFrequency=".035 .55" numOctaves="3" seed="8"/><feColorMatrix type="saturate" values="0"/><feBlend in="SourceGraphic" mode="soft-light"/></filter><linearGradient id="wood" x2="0" y2="1"><stop stop-color="#f5ce8d"/><stop offset=".48" stop-color="#e5a85f"/><stop offset="1" stop-color="#f1c17c"/></linearGradient></defs><rect width="300" height="300" fill="url(#wood)"/><rect width="300" height="300" fill="#b97d3b" filter="url(#grain)" opacity=".23"/><rect x="5" y="5" width="290" height="290" rx="8" stroke="#bd813e" fill="none"/><g stroke="#e8b666" stroke-width="6" fill="none"><path id="board-lines" d="M50 50H250 M50 150H250 M50 250H250 M50 50V250 M150 50V250 M250 50V250 M50 50L250 250 M250 50L50 250"/></g><use href="#board-lines" stroke="#47230e" stroke-width="4" fill="none"/></svg>
         <div id="board" class="board" role="group" aria-label="Game board"></div>
-      </div></div>
+      </div>
+      <div id="capture-choice" class="capture-overlay" hidden role="group" aria-label="Capture decision"><div class="capture-choice wood-panel"><p>Another capture is available. Continue with this piece, or end your turn.</p><div><button id="continue-capturing" class="gold-button">Continue Capturing</button><button id="end-capture-turn" class="secondary-button">End Turn</button></div></div></div>
+      </div>
       <p id="status" role="status" aria-live="polite" aria-atomic="true"></p><p id="phase"></p>
-      <div id="capture-choice" class="capture-choice wood-panel" hidden role="group" aria-label="Capture decision"><p>Another capture is available. Continue with this piece, or end your turn.</p><div><button id="continue-capturing" class="gold-button">Continue Capturing</button><button id="end-capture-turn" class="secondary-button">End Turn</button></div></div>
+
       <div class="game-actions"><button id="back-setup" class="secondary-button">← Back to Setup</button><button id="restart" class="gold-button">↻ Restart</button><button id="next-match" class="gold-button" hidden>Next Match →</button></div>
       <p class="score-note">Saved scores for each game, mode, difficulty and side</p><button id="reset-scores">Reset scores</button>
       <details><summary>How to play</summary><p id="game-rules"></p></details>
@@ -560,7 +563,7 @@
       }
       $('#phase').textContent=`Match ${completed[config.game]+(gameOver?0:1)} · Turn ${turnNumber+1}${config.game==='morris'?` · ${quiet}/100 moves`:` · ${board.filter(Boolean).length} pieces remaining`}`;
       $('#next-match').hidden=!gameOver;
-      $('#capture-choice').hidden=config.game!=='twelve'||forced===null||!active||gameOver||computer;
+      $('#capture-choice').hidden=config.game!=='twelve'||forced===null||!captureDecision||!active||gameOver||computer;
       $('#continue-capturing').hidden=!captureDecision;
       $('#continue-capturing').disabled=!captureDecision||computer;
       $('#end-capture-turn').disabled=forced===null||computer;
