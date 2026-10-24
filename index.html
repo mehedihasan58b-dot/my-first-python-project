@@ -36,7 +36,8 @@
     select:focus-visible { outline: 3px solid #f5d87b; outline-offset: 3px; }
     select:disabled { opacity: .6; }
     .player { justify-content: center; font-size: 13px; padding: 12px 8px; }
-    .cell.x { color: #d5ef90; }
+    .cell.x, #player-x .symbol { color: #ff7d88; }
+    .cell.o, #player-o .symbol { color: #79b4ff; }
     .cell.winner { background: #344333; border-color: #d5ef90; }
     #status { text-align: center; font-size: 16px; font-weight: 600; margin: 20px 0 18px; min-height: 24px; }
     #restart { width: 100%; margin-top: 20px; padding: 15px; background: #d5ef90; color: #172016; border: 0; border-radius: 10px; font: 700 14px system-ui, sans-serif; cursor: pointer; touch-action: manipulation; }
@@ -58,21 +59,34 @@
     .cell.target::before { border-color: #d5ef90; background: #293c35; }
     .cell.winner::before { background: #344333; border-color: #d5ef90; }
     #phase { color: #b3bdcf; font-size: 13px; min-height: 20px; }
+    .cell.x::before { background: #692d3d; border-color: #ff7d88; }
+    .cell.o::before { background: #244c7b; border-color: #79b4ff; }
+    .cell.selected::before { outline: 3px solid #f5d87b; outline-offset: 3px; }
+    .cell.winner::before { box-shadow: 0 0 0 4px #d5ef90; }
+    .audio-controls { display: flex; gap: 10px; margin: 16px 0 8px; }
+    .audio-controls button { flex: 1; min-height: 44px; border: 1px solid #53617a; border-radius: 10px; background: #191f30; color: #f4f3ed; font: 600 13px system-ui, sans-serif; cursor: pointer; touch-action: manipulation; }
+    .audio-controls button[aria-pressed="true"] { border-color: #d5ef90; color: #d5ef90; }
+    #audio-note { margin: 0 0 18px; color: #a7afc1; font-size: 11px; }
   </style>
 </head>
 <body>
   <main>
-    <header><span class="eyebrow">A little friendly competition</span><h1>Tin Guti<span style="color:#d5ef90">.</span></h1><p class="intro">Three Men's Morris · Place three. Slide to win.</p></header>
+    <header><span class="eyebrow">A little friendly competition</span><h1>Tin Guti<span style="color:#d5ef90">.</span></h1><p class="intro">Three Men's Morris · Six pieces. Slide to win.</p></header>
     <section class="game" aria-label="Tin Guti game">
       <div class="settings">
         <label>Game mode<select id="mode"><option value="pvp">Player vs Player</option><option value="computer">Player vs Computer</option></select></label>
         <label>Computer difficulty<select id="difficulty" disabled><option value="easy">Easy</option><option value="medium">Medium</option><option value="hard">Hard</option></select></label>
       </div>
-      <div class="players">
-        <div id="player-x" class="player active"><span class="symbol x">X</span> Player one</div>
-        <div id="player-o" class="player"><span class="symbol o">O</span> <span id="o-name">Player two</span></div>
+      <div class="audio-controls" aria-label="Audio settings">
+        <button id="sound-toggle" aria-pressed="true">Sound ON</button>
+        <button id="music-toggle" aria-pressed="false">Music OFF</button>
       </div>
-      <p id="status" role="status" aria-live="polite" aria-atomic="true">X's turn — you're up!</p>
+      <p id="audio-note">Audio starts after your first tap. Music is optional.</p>
+      <div class="players">
+        <div id="player-x" class="player active"><span class="symbol x">X</span> Red · Player one</div>
+        <div id="player-o" class="player"><span class="symbol o">O</span> <span id="o-name">Blue · Player two</span></div>
+      </div>
+      <p id="status" role="status" aria-live="polite" aria-atomic="true">Red (X)'s turn — select your piece</p>
       <p id="phase"></p>
       <div class="board-wrap" id="board-wrap">
       <svg id="connections" viewBox="0 0 300 300" aria-hidden="true"><g stroke="#53617a" stroke-width="3" fill="none"><path d="M50 50H250 M50 150H250 M50 250H250 M50 50V250 M150 50V250 M250 50V250 M50 50L250 250 M250 50L50 250"/></g></svg>
@@ -90,14 +104,14 @@
       </div>
       <button id="restart">↻ &nbsp; Restart game</button>
       <div class="scoreboard" role="group" aria-label="Scoreboard">
-        <div>X wins<strong id="score-x">0</strong></div>
+        <div>Red wins<strong id="score-x">0</strong></div>
         <div>Draws<strong id="score-draw">0</strong></div>
-        <div>O wins<strong id="score-o">0</strong></div>
+        <div>Blue wins<strong id="score-o">0</strong></div>
       </div>
       <p class="score-note">Scores for this mode and difficulty · this page session</p>
       <button id="reset-scores">Reset scores</button>
     </section>
-    <p class="instructions"><strong>Three pieces. One straight line.</strong><br>X starts. Each player places exactly three pieces, one per turn (an earlier line wins immediately). Then select your piece and tap a highlighted adjacent empty point on a connecting line. No jumping. All three rows, columns and the two long diagonals are winning lines. A blocked player loses. Three repetitions of the same board and turn, or 100 movement turns, draw. In computer mode you play X. Changing settings starts a new round.</p>
+    <p class="instructions"><strong>Three pieces. One straight line.</strong><br>All six pieces start on the board: three red (X) and three blue (O). Red starts. Select your piece and tap a highlighted adjacent empty point on a connecting line. No jumping. All three rows, columns and the two long diagonals are winning lines. A blocked player loses. Three repetitions of the same board and turn, or 100 movement turns, draw. In computer mode you play Red (X). Changing settings starts a new round.</p>
     <footer>No sign-ups. Just good company.</footer>
   </main>
   <script>
@@ -114,29 +128,25 @@
         neighbors[line[i + 1]].add(line[i]);
       }
     });
+    // Rotating the board 180° swaps the colors: equal mobility, no starting line.
+    const STARTING_BOARD = Object.freeze(['X','O','','O','','X','','X','O']);
+    const playerName = mark => mark === 'X' ? 'Red (X)' : 'Blue (O)';
     let board, currentPlayer, gameOver;
     let selected = null, computerTimer = null, movementTurns = 0, history = new Map();
     const scores = {};
     const other = mark => mark === 'X' ? 'O' : 'X';
-    const count = state => state.filter(Boolean).length;
-    const moving = state => count(state) === 6;
     const stateKey = (state, turn) => state.map(x => x || '-').join('') + turn;
     function winnerLine(state) {
       return winningLines.find(line => state[line[0]] && line.every(i => state[i] === state[line[0]]));
     }
     function legalMoves(state, turn) {
       if (winnerLine(state)) return [];
-      const empty = state.map((v, i) => v ? -1 : i).filter(i => i !== -1);
-      if (!moving(state)) {
-        if (state.filter(v => v === turn).length >= 3) return [];
-        return empty.map(to => ({ from: null, to }));
-      }
       return state.flatMap((v, from) => v !== turn ? [] :
         [...neighbors[from]].filter(to => !state[to]).map(to => ({ from, to })));
     }
     function applyMove(state, move, turn) {
       const next = state.slice();
-      if (move.from !== null) next[move.from] = '';
+      next[move.from] = '';
       next[move.to] = turn;
       return next;
     }
@@ -153,7 +163,7 @@
     function outcome(state, turn, seen, steps) {
       const line = winnerLine(state);
       if (line) return { winner: state[line[0]], reason: 'Three in a row!' };
-      if (!legalMoves(state, turn).length) return { winner: other(turn), reason: `${turn} has no legal moves.` };
+      if (!legalMoves(state, turn).length) return { winner: other(turn), reason: `${playerName(turn)} has no legal moves.` };
       if ((seen.get(stateKey(state, turn)) || 0) >= 3)
         return { winner: 'draw', reason: 'Same position and turn repeated three times.' };
       if (steps >= 100) return { winner: 'draw', reason: '100 movement turns reached.' };
@@ -161,7 +171,7 @@
     }
     function render() {
       const computerTurn = mode.value === 'computer' && currentPlayer === 'O';
-      const isMoving = moving(board), line = winnerLine(board);
+      const line = winnerLine(board);
       const targets = selected === null ? [] : legalMoves(board, currentPlayer).filter(m => m.from === selected).map(m => m.to);
       cells.forEach((cell, index) => {
         cell.textContent = board[index];
@@ -169,18 +179,15 @@
         if (line?.includes(index)) cell.classList.add('winner');
         if (selected === index) cell.classList.add('selected');
         if (targets.includes(index)) cell.classList.add('target');
-        cell.disabled = gameOver || computerTurn || (isMoving ?
-          !(board[index] === currentPlayer || targets.includes(index)) : !!board[index]);
-        cell.setAttribute('aria-label', `Row ${Math.floor(index/3)+1}, column ${index%3+1}, ${board[index] || 'empty'}${selected === index ? ', selected' : ''}${targets.includes(index) ? ', legal destination' : ''}`);
+        cell.disabled = gameOver || computerTurn || !(board[index] === currentPlayer || targets.includes(index));
+        cell.setAttribute('aria-label', `Row ${Math.floor(index/3)+1}, column ${index%3+1}, ${board[index] ? playerName(board[index]) : 'empty'}${selected === index ? ', selected' : ''}${targets.includes(index) ? ', legal destination' : ''}`);
         cell.setAttribute('aria-pressed', String(selected === index));
       });
       $('#player-x').classList.toggle('active', !gameOver && currentPlayer === 'X');
       $('#player-o').classList.toggle('active', !gameOver && currentPlayer === 'O');
-      if (!gameOver) status.textContent = computerTurn ? 'Computer (O) is thinking…' :
-        `${currentPlayer}'s turn — ${isMoving ? (selected === null ? 'select your piece' : 'tap a highlighted destination') : 'place a piece'}`;
-      $('#phase').textContent = isMoving ?
-        `Move phase · ${movementTurns}/100 turns · adjacent moves only` :
-        `Place phase · X: ${board.filter(v=>v==='X').length}/3 · O: ${board.filter(v=>v==='O').length}/3`;
+      if (!gameOver) status.textContent = computerTurn ? 'Computer — Blue (O) is thinking…' :
+        `${playerName(currentPlayer)}'s turn — ${selected === null ? 'select your piece' : 'tap a highlighted destination'}`;
+      $('#phase').textContent = `Move ${movementTurns}/100 · adjacent moves only`;
       updateScores();
     }
     function heuristic(state) {
@@ -202,7 +209,7 @@
         const key = stateKey(next, nextTurn), old = seen.get(key) || 0;
         seen.set(key, old + 1);
         const value = search(next, nextTurn, depth - 1, seen,
-          steps + (moving(state) ? 1 : 0), alpha, beta);
+          steps + 1, alpha, beta);
         if (old) seen.set(key, old); else seen.delete(key);
         if (turn === 'O') { best = Math.max(best, value); alpha = Math.max(alpha, best); }
         else { best = Math.min(best, value); beta = Math.min(beta, best); }
@@ -219,21 +226,22 @@
       for (const move of moves) {
         const next = applyMove(state, move, 'O'), nextSeen = new Map(seen), key = stateKey(next, 'X');
         nextSeen.set(key, (nextSeen.get(key) || 0) + 1);
-        const value = search(next, 'X', depth - 1, nextSeen, steps + (moving(state) ? 1 : 0));
+        const value = search(next, 'X', depth - 1, nextSeen, steps + 1);
         if (value > best) { best = value; choice = move; }
       }
       return choice;
     }
     function finish(result) {
       gameOver = true;
+      playSound(result.winner === 'draw' ? 'draw' : mode.value === 'computer' && result.winner === 'O' ? 'lose' : 'win');
       currentScores()[result.winner]++;
-      status.textContent = result.winner === 'draw' ? `Draw! ${result.reason}` : `${result.winner} wins! ${result.reason}`;
+      status.textContent = result.winner === 'draw' ? `Draw! ${result.reason}` : `${playerName(result.winner)} wins! ${result.reason}`;
     }
     function commitMove(move, fromComputer = false) {
       const computerTurn = mode.value === 'computer' && currentPlayer === 'O';
       if (gameOver || computerTurn !== fromComputer || !move) return;
       if (!legalMoves(board, currentPlayer).some(m => m.from === move.from && m.to === move.to)) return;
-      if (moving(board)) movementTurns++;
+      movementTurns++;
       board = applyMove(board, move, currentPlayer);
       selected = null;
       currentPlayer = other(currentPlayer);
@@ -241,6 +249,7 @@
       history.set(key, (history.get(key) || 0) + 1);
       const result = outcome(board, currentPlayer, history, movementTurns);
       if (result) finish(result);
+      else playSound('move');
       render();
       if (!gameOver && mode.value === 'computer' && currentPlayer === 'O') {
         computerTimer = setTimeout(() => {
@@ -251,21 +260,96 @@
     }
     function makeMove(index) {
       if (gameOver || (mode.value === 'computer' && currentPlayer === 'O')) return;
-      if (moving(board) && board[index] === currentPlayer) {
+      if (board[index] === currentPlayer) {
         selected = selected === index ? null : index;
         render();
-      } else commitMove({ from: moving(board) ? selected : null, to: index });
+      } else commitMove({ from: selected, to: index });
     }
     function cancelComputer() { clearTimeout(computerTimer); computerTimer = null; }
     function restartGame() {
       cancelComputer();
-      board = Array(9).fill(''); currentPlayer = 'X'; gameOver = false;
+      board = STARTING_BOARD.slice(); currentPlayer = 'X'; gameOver = false;
       selected = null; movementTurns = 0;
       history = new Map([[stateKey(board, currentPlayer), 1]]);
       difficulty.disabled = mode.value === 'pvp';
-      $('#o-name').textContent = mode.value === 'computer' ? 'Computer' : 'Player two';
+      $('#o-name').textContent = mode.value === 'computer' ? 'Blue · Computer' : 'Blue · Player two';
       render();
     }
+    let audioContext = null, effectsGain = null, musicGain = null;
+    let soundEnabled = true, musicEnabled = false, musicTimer = null, musicStep = 0;
+    let audioUnavailable = false;
+    async function unlockAudio() {
+      if (audioUnavailable) return false;
+      try {
+        if (!audioContext) {
+          const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+          if (!AudioContextClass) throw new Error('Web Audio unavailable');
+          audioContext = new AudioContextClass();
+          effectsGain = audioContext.createGain(); musicGain = audioContext.createGain();
+          effectsGain.connect(audioContext.destination); musicGain.connect(audioContext.destination);
+          effectsGain.gain.value = soundEnabled ? 0.18 : 0;
+          musicGain.gain.value = musicEnabled ? 0.06 : 0;
+        }
+        if (audioContext.state !== 'running') await audioContext.resume();
+        $('#audio-note').textContent = 'Separate sound and music controls · synthesized on your device';
+        syncMusic();
+        return audioContext.state === 'running';
+      } catch {
+        audioUnavailable = true;
+        $('#audio-note').textContent = 'Audio is unavailable in this browser. The game still works.';
+        return false;
+      }
+    }
+    function tone(frequency, start, duration, bus, type = 'sine') {
+      const oscillator = audioContext.createOscillator(), envelope = audioContext.createGain();
+      oscillator.type = type; oscillator.frequency.value = frequency;
+      envelope.gain.setValueAtTime(0, start);
+      envelope.gain.linearRampToValueAtTime(0.7, start + 0.015);
+      envelope.gain.exponentialRampToValueAtTime(0.001, start + duration);
+      oscillator.connect(envelope); envelope.connect(bus);
+      oscillator.onended = () => { oscillator.disconnect(); envelope.disconnect(); };
+      oscillator.start(start); oscillator.stop(start + duration + 0.02);
+    }
+    function playSound(kind) {
+      // Never create or resume a context from a computer timer or page load.
+      if (!soundEnabled || !audioContext || audioContext.state !== 'running' || document.hidden) return;
+      const notes = { click: [440], move: [330, 495], win: [523,659,784,1047], lose: [392,330,262], draw: [392,440,392] };
+      (notes[kind] || notes.click).forEach((frequency, i) =>
+        tone(frequency, audioContext.currentTime + i * 0.11, kind === 'click' ? 0.07 : 0.18, effectsGain, kind === 'move' ? 'triangle' : 'sine'));
+    }
+    function syncMusic() {
+      const shouldPlay = musicEnabled && audioContext?.state === 'running' && !document.hidden;
+      if (musicGain) musicGain.gain.setValueAtTime(shouldPlay ? 0.06 : 0, audioContext.currentTime);
+      if (!shouldPlay) { clearInterval(musicTimer); musicTimer = null; return; }
+      if (musicTimer !== null) return;
+      const melody = [262,330,392,330,294,349,440,349];
+      const beat = () => tone(melody[musicStep++ % melody.length], audioContext.currentTime, 0.45, musicGain);
+      beat(); musicTimer = setInterval(beat, 600);
+    }
+    // Capture taps/keys so mobile Safari/Chrome can resume audio before game actions.
+    const interact = () => { void unlockAudio(); };
+    document.addEventListener('pointerdown', interact, { capture: true });
+    document.addEventListener('keydown', interact, { capture: true });
+    document.addEventListener('click', event => {
+      if (event.target.closest('button:not(.cell), select')) {
+        void unlockAudio().then(ready => { if (ready) playSound('click'); });
+      }
+    });
+    document.addEventListener('visibilitychange', syncMusic);
+    $('#sound-toggle').addEventListener('click', async () => {
+      soundEnabled = !soundEnabled;
+      $('#sound-toggle').textContent = soundEnabled ? 'Sound ON' : 'Sound OFF';
+      $('#sound-toggle').setAttribute('aria-pressed', String(soundEnabled));
+      if (effectsGain) effectsGain.gain.setValueAtTime(soundEnabled ? 0.18 : 0, audioContext.currentTime);
+      await unlockAudio();
+    });
+    $('#music-toggle').addEventListener('click', async () => {
+      musicEnabled = !musicEnabled;
+      $('#music-toggle').textContent = musicEnabled ? 'Music ON' : 'Music OFF';
+      $('#music-toggle').setAttribute('aria-pressed', String(musicEnabled));
+      syncMusic();
+      await unlockAudio();
+    });
     cells.forEach((cell, i) => cell.addEventListener('click', () => makeMove(i)));
     $('#restart').addEventListener('click', restartGame);
     mode.addEventListener('change', restartGame);
